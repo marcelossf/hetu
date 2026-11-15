@@ -22,6 +22,7 @@ export function LoginScreen() {
   const [error, setError] = useState("");
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
+  const [isStandalone, setIsStandalone] = useState<boolean | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -59,6 +60,13 @@ export function LoginScreen() {
   }, []);
 
   useEffect(() => {
+    const standaloneQuery = window.matchMedia("(display-mode: standalone)");
+    const updateStandalone = () => {
+      setIsStandalone(
+        standaloneQuery.matches ||
+          ("standalone" in navigator && navigator.standalone === true),
+      );
+    };
     const handleInstallAvailable = (event: Event) => {
       event.preventDefault();
       setInstallPrompt(event as BeforeInstallPromptEvent);
@@ -67,6 +75,8 @@ export function LoginScreen() {
       setInstallPrompt(null);
     };
 
+    updateStandalone();
+    standaloneQuery.addEventListener("change", updateStandalone);
     window.addEventListener(
       "beforeinstallprompt",
       handleInstallAvailable as EventListener,
@@ -74,6 +84,7 @@ export function LoginScreen() {
     window.addEventListener("appinstalled", handleInstalled);
 
     return () => {
+      standaloneQuery.removeEventListener("change", updateStandalone);
       window.removeEventListener(
         "beforeinstallprompt",
         handleInstallAvailable as EventListener,
@@ -147,11 +158,6 @@ export function LoginScreen() {
         />
 
         <div className="mx-auto mt-5 h-px w-14 bg-[#c4a765]" />
-        <p className="mt-5 text-sm leading-6 text-[#77766e]">
-          Um espaço para cuidar do seu negócio
-          <br />
-          com a mesma atenção de cada ritual.
-        </p>
 
         {user ? (
           <div className="mt-8 rounded-2xl bg-[#f4f1ea] px-5 py-5">
@@ -171,7 +177,7 @@ export function LoginScreen() {
         ) : (
           <>
             <h1 className="mt-8 font-serif text-2xl text-[#2c3e30] sm:text-[1.7rem]">
-              Bem-vinda ao Hetu
+              Bem-vinda à Hetu
             </h1>
             <p className="mt-2 text-sm text-[#77766e]">
               Entre para continuar sua rotina de cuidado.
@@ -226,23 +232,25 @@ export function LoginScreen() {
           </p>
         )}
 
-        <div className="mt-7 border-t border-[#eee9df] pt-5">
-          {installPrompt ? (
-            <button
-              type="button"
-              onClick={handleInstall}
-              className="text-sm font-medium text-[#536d4c] underline decoration-[#c4a765] underline-offset-4 transition hover:text-[#1e3f20]"
-            >
-              Instalar Hetu no celular
-            </button>
-          ) : (
-            <p className="text-xs leading-5 text-[#77766e]">
-              No Android/Chrome, use o menu para instalar. No iPhone/iPad, abra
-              no Safari, toque em Compartilhar e escolha Adicionar à Tela de
-              Início.
-            </p>
-          )}
-        </div>
+        {isStandalone === false && (
+          <div className="mt-7 border-t border-[#eee9df] pt-5">
+            {installPrompt ? (
+              <button
+                type="button"
+                onClick={handleInstall}
+                className="text-sm font-medium text-[#536d4c] underline decoration-[#c4a765] underline-offset-4 transition hover:text-[#1e3f20]"
+              >
+                Instalar Hetu no celular
+              </button>
+            ) : (
+              <p className="text-xs leading-5 text-[#77766e]">
+                No Android/Chrome, use o menu para instalar. No iPhone/iPad,
+                abra no Safari, toque em Compartilhar e escolha Adicionar à Tela
+                de Início.
+              </p>
+            )}
+          </div>
+        )}
       </section>
     </main>
   );
