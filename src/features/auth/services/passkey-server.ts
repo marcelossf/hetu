@@ -160,11 +160,23 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext> {
     throw new PasskeyRequestError("Sua sessão expirou. Entre novamente com Google.", 401);
   }
 
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  if (userError || !userData.user) {
+    throw new PasskeyRequestError("Não foi possível confirmar sua conta. Entre novamente.", 401);
+  }
+
   const claims = data.claims;
   const appMetadata = claims.app_metadata;
+  const userAppMetadata = userData.user.app_metadata;
   const providers =
     isRecord(appMetadata) && Array.isArray(appMetadata.providers)
       ? appMetadata.providers.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [];
+  const userProviders =
+    Array.isArray(userAppMetadata.providers)
+      ? userAppMetadata.providers.filter(
           (value): value is string => typeof value === "string",
         )
       : [];
@@ -172,12 +184,23 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext> {
     isRecord(appMetadata) && typeof appMetadata.provider === "string"
       ? appMetadata.provider
       : "";
-  const provider = providers.includes("google") ? "google" : metadataProvider;
+  const provider =
+    providers.includes("google") || userProviders.includes("google")
+      ? "google"
+      : metadataProvider;
+  const lastSignInAt = userData.user.last_sign_in_at
+    ? Date.parse(userData.user.last_sign_in_at) / 1000
+    : null;
 
   return {
     userId: claims.sub,
     email: typeof claims.email === "string" ? claims.email : claims.sub,
-    authTime: typeof claims.auth_time === "number" ? claims.auth_time : null,
+    authTime:
+      typeof claims.auth_time === "number"
+        ? claims.auth_time
+        : lastSignInAt !== null && Number.isFinite(lastSignInAt)
+          ? lastSignInAt
+          : null,
     provider,
     database: createPasskeyDatabaseClient(),
   };
@@ -441,9 +464,15 @@ function hasRecentGoogleLogin(context: AuthContext): boolean {
 }
 
 function requireRecentGoogleLogin(context: AuthContext): void {
+  if (context.provider !== "google") {
+    throw new PasskeyRequestError(
+      "Não identificamos esta sessão como login Google. Saia da conta e entre novamente com Google.",
+      403,
+    );
+  }
   if (!hasRecentGoogleLogin(context)) {
     throw new PasskeyRequestError(
-      "Para cadastrar uma passkey, entre novamente com sua conta Google.",
+      "Seu login Google não foi reconhecido como recente. Saia da conta e entre novamente com Google antes de ativar a biometria.",
       403,
     );
   }
