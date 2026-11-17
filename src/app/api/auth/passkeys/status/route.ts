@@ -5,5 +5,5 @@ import {
 } from "@/features/auth/services/passkey-server";
 
 export function GET(request: NextRequest) {
-  return handlePasskeyError(() => getPasskeyStatus(request));
+  return handlePasskeyError(() => getPasskeyStatus(request), "status");
 }

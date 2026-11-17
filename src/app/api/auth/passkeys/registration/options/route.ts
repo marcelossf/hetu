@@ -5,5 +5,8 @@ import {
 } from "@/features/auth/services/passkey-server";
 
 export function POST(request: NextRequest) {
-  return handlePasskeyError(() => createRegistrationOptions(request));
+  return handlePasskeyError(
+    () => createRegistrationOptions(request),
+    "registro-opcoes",
+  );
 }

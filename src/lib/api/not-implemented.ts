@@ -24,6 +24,6 @@ export function createProtectedNotImplementedHandler(domain: string) {
         { error: `O endpoint ${domain} ainda não foi implementado.` },
         { status: 501 },
       );
-    });
+    }, domain);
   };
 }

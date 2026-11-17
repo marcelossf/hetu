@@ -5,5 +5,8 @@ import {
 } from "@/features/auth/services/passkey-server";
 
 export function POST(request: NextRequest) {
-  return handlePasskeyError(() => verifyAuthentication(request));
+  return handlePasskeyError(
+    () => verifyAuthentication(request),
+    "autenticacao-verificacao",
+  );
 }

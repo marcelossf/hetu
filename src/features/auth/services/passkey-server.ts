@@ -9,6 +9,7 @@ import {
 import { createClient } from "@supabase/supabase-js";
 import {
   createHmac,
+  randomUUID,
   timingSafeEqual,
 } from "node:crypto";
 import type { NextRequest } from "next/server";
@@ -753,6 +754,7 @@ export async function requireUnlockedUser(
 
 export async function handlePasskeyError(
   operation: () => Promise<Response>,
+  operationName = "api-protegida",
 ): Promise<Response> {
   try {
     const response = await operation();
@@ -766,9 +768,15 @@ export async function handlePasskeyError(
       );
     }
 
-    console.error("Erro no fluxo de autenticação por passkey:", error);
+    const reference = randomUUID();
+    console.error(
+      `Erro no endpoint de passkey "${operationName}" (${reference}):`,
+      error,
+    );
     return Response.json(
-      { error: "Não foi possível concluir a verificação do dispositivo." },
+      {
+        error: `Falha no servidor ao processar "${operationName}". Consulte os logs da Vercel e informe o código ${reference}.`,
+      },
       { status: 500, headers: { "Cache-Control": "no-store" } },
     );
   }

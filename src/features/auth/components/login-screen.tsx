@@ -39,7 +39,7 @@ function LoadingIndicator({ label }: { label: string }) {
         width={280}
         height={770}
         priority
-        className="animate-hetu-pulse h-auto max-h-[min(42vh,300px)] w-auto max-w-full object-contain"
+        className="animate-hetu-pulse h-auto max-h-[min(34svh,250px)] w-auto max-w-full object-contain"
       />
       <p className="mt-7 text-sm text-hetu-text/75">{label}</p>
     </div>
@@ -244,7 +244,7 @@ export function LoginScreen() {
         : "Verificando sua sessão...";
 
   return (
-    <main className="relative flex min-h-screen flex-1 items-center justify-center overflow-x-hidden bg-hetu-cream px-5 py-8 sm:px-8">
+    <main className="relative flex min-h-dvh flex-1 items-center justify-center overflow-x-hidden bg-hetu-cream px-5 py-4 sm:px-8 sm:py-8">
       <div
         aria-hidden="true"
         className="pointer-events-none absolute -left-32 -top-40 h-96 w-96 rounded-full bg-hetu-green/[0.07] blur-3xl"
@@ -256,7 +256,7 @@ export function LoginScreen() {
 
       <section
         aria-label="Autenticação Hetu"
-        className="relative w-full max-w-md rounded-[2rem] border border-hetu-green/10 bg-white/90 px-7 py-8 text-center shadow-[0_24px_80px_rgba(42,42,42,0.10)] backdrop-blur sm:px-12 sm:py-10"
+        className="relative w-full max-w-md rounded-[2rem] border border-hetu-green/10 bg-white/90 px-6 py-5 text-center shadow-[0_24px_80px_rgba(42,42,42,0.10)] backdrop-blur sm:px-12 sm:py-10"
       >
         {isLoading ? (
           <LoadingIndicator label={loadingLabel} />
@@ -268,7 +268,7 @@ export function LoginScreen() {
               width={280}
               height={770}
               priority
-              className="mx-auto h-auto max-h-[min(42vh,300px)] w-auto max-w-full object-contain"
+              className="mx-auto h-auto max-h-[min(34svh,250px)] w-auto max-w-full object-contain"
             />
             <div className="mx-auto mt-5 h-px w-14 bg-hetu-gold" />
 
