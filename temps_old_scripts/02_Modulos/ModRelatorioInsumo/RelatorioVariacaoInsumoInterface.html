@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+    <style>
+      :root {
+        --hetu-primary: #4A154B;
+        --hetu-secondary: #611F69;
+        --hetu-accent: #007A5A;
+        --hetu-bg: #F8F9FA;
+        --hetu-surface: #FFFFFF;
+        --hetu-border: #E0E0E0;
+        --hetu-text: #1D1C1D;
+        --hetu-text-muted: #616061;
+      }
+
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--hetu-bg);
+        color: var(--hetu-text);
+      }
+
+      .main-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        box-sizing: border-box;
+        padding: 10px;
+        overflow: hidden;
+      }
+
+      .header-brand {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        background: var(--hetu-primary);
+        color: #FFF;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+      .logo-badge {
+        background: #FFF;
+        color: var(--hetu-primary);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 800;
+        margin-right: 10px;
+      }
+
+      .scrollable-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+      }
+
+      .fieldset {
+        border: 1px solid var(--hetu-border);
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        background: var(--hetu-surface);
+      }
+      .fieldset legend {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--hetu-primary);
+        padding: 0 5px;
+      }
+
+      .row { display: flex; gap: 10px; align-items: flex-end; }
+      .col { flex: 1; }
+
+      label {
+        display: block;
+        font-size: 11px;
+        font-weight: 600;
+        margin-bottom: 3px;
+      }
+
+      input, select {
+        width: 100%;
+        padding: 6px;
+        box-sizing: border-box;
+        border: 1px solid var(--hetu-border);
+        border-radius: 4px;
+        font-size: 12px;
+      }
+
+      table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+      th, td { border: 1px solid var(--hetu-border); padding: 6px; text-align: left; font-size: 11px; }
+      th { background-color: #F4F4F4; color: var(--hetu-text-muted); }
+
+      #chart_div {
+        width: 100%;
+        height: 200px;
+        margin-top: 5px;
+      }
+
+      .btn { padding: 7px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+      .btn-search { background-color: var(--hetu-primary); color: white; width: 100%; }
+      .btn-cancel { background-color: #E8E8E8; color: var(--hetu-text); }
+
+      .fixed-bottom {
+        flex-shrink: 0;
+        background: var(--hetu-surface);
+        border-top: 2px solid var(--hetu-border);
+        padding: 10px;
+        text-align: right;
+        border-radius: 6px;
+      }
+      
+      .empty-msg { text-align: center; color: var(--hetu-text-muted); font-size: 12px; padding: 15px; }
+    </style>
+  </head>
+  <body>
+
+    <div class="main-container">
+      <div class="header-brand">
+        <span class="logo-badge">HETU</span>
+        <span style="font-weight: bold; font-size: 15px;">Variação de Preço por Insumo</span>
+      </div>
+
+      <div class="scrollable-content">
+        <!-- Filtros -->
+        <div class="fieldset">
+          <legend>Filtros de Pesquisa</legend>
+          <div class="row">
+            <div class="col" style="flex: 2;">
+              <label for="insumo">Insumo:*</label>
+              <select id="insumo">
+                <option value="">Carregando insumos...</option>
+              </select>
+            </div>
+            <div class="col">
+              <label for="dataInicio">Data Inicial:*</label>
+              <input type="date" id="dataInicio">
+            </div>
+            <div class="col">
+              <label for="dataFim">Data Final:*</label>
+              <input type="date" id="dataFim">
+            </div>
+            <div class="col" style="flex: 0.8;">
+              <button type="button" class="btn btn-search" onclick="filtrar()">Buscar</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Gráfico -->
+        <div class="fieldset">
+          <legend>Evolução do Preço Unitário (R$)</legend>
+          <div id="chart_div"><div class="empty-msg">Selecione os filtros e clique em Buscar.</div></div>
+        </div>
+
+        <!-- Tabela -->
+        <div class="fieldset">
+          <legend>Histórico de Compras</legend>
+          <table>
+            <thead>
+              <tr>
+                <th>Data</th>
+                <th>Fornecedor</th>
+                <th>Qtd</th>
+                <th>Unid</th>
+                <th>Vlr. Unitário</th>
+                <th>Vlr. Total</th>
+              </tr>
+            </thead>
+            <tbody id="corpoTabela">
+              <tr><td colspan="6" class="empty-msg">Nenhum dado consultado.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="fixed-bottom">
+        <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Fechar</button>
+      </div>
+    </div>
+
+    <script>
+      google.charts.load('current', {'packages':['corechart']});
+
+      // Configura data inicial para 30 dias atrás e data final para hoje
+      const hoje = new Date();
+      const trintaDiasAtras = new Date();
+      trintaDiasAtras.setDate(hoje.getDate() - 30);
+
+      document.getElementById('dataFim').valueAsDate = hoje;
+      document.getElementById('dataFim').max = hoje.toISOString().split("T")[0];
+      document.getElementById('dataInicio').valueAsDate = trintaDiasAtras;
+
+      window.onload = function() {
+        google.script.run
+          .withSuccessHandler(preencherInsumos)
+          .obterDadosIniciaisRelatorioInsumos();
+      };
+
+      function preencherInsumos(dados) {
+        const select = document.getElementById('insumo');
+        select.innerHTML = '<option value="">Selecione um insumo...</option>';
+        if (dados && dados.insumos) {
+          dados.insumos.forEach(i => {
+            select.innerHTML += `<option value="${i.id}">${i.nome}</option>`;
+          });
+        }
+      }
+
+      function filtrar() {
+        const idInsumo = document.getElementById('insumo').value;
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+
+        if (!idInsumo) {
+          alert('Por favor, selecione um insumo!');
+          return;
+        }
+        if (!dataInicio || !dataFim) {
+          alert('Por favor, selecione o período!');
+          return;
+        }
+
+        const btn = document.querySelector('.btn-search');
+        btn.disabled = true;
+        btn.innerText = 'Buscando...';
+
+        google.script.run
+          .withSuccessHandler(exibirResultado)
+          .withFailureHandler(function(err) {
+            alert('Erro: ' + err.message);
+            btn.disabled = false;
+            btn.innerText = 'Buscar';
+          })
+          .consultarHistoricoInsumo({ idInsumo, dataInicio, dataFim });
+      }
+
+      function exibirResultado(res) {
+        const btn = document.querySelector('.btn-search');
+        btn.disabled = false;
+        btn.innerText = 'Buscar';
+
+        const tbody = document.getElementById('corpoTabela');
+        tbody.innerHTML = '';
+
+        if (!res.dados || res.dados.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">Nenhum registro encontrado no período.</td></tr>';
+          document.getElementById('chart_div').innerHTML = '<div class="empty-msg">Sem dados para gerar gráfico.</div>';
+          return;
+        }
+
+        // Preenche Tabela
+        res.dados.forEach(item => {
+          tbody.innerHTML += `
+            <tr>
+              <td>${item.data}</td>
+              <td>${item.fornecedor}</td>
+              <td>${item.quantidade}</td>
+              <td>${item.unidade}</td>
+              <td>R$ ${item.valorUnitario.toFixed(2)}</td>
+              <td>R$ ${item.valorTotal.toFixed(2)}</td>
+            </tr>
+          `;
+        });
+
+        // Monta Gráfico
+        desenharGrafico(res.dados);
+      }
+
+      function desenharGrafico(dados) {
+        const dataTable = new google.visualization.DataTable();
+        dataTable.addColumn('string', 'Data');
+        dataTable.addColumn('number', 'Preço Unitário (R$)');
+
+        dados.forEach(d => {
+          dataTable.addRow([d.data.split(' ')[0], d.valorUnitario]);
+        });
+
+        const options = {
+          legend: { position: 'none' },
+          colors: ['#4A154B'],
+          hAxis: { title: 'Data da Compra', textStyle: { fontSize: 10 } },
+          vAxis: { title: 'R$', textStyle: { fontSize: 10 } },
+          chartArea: { width: '85%', height: '70%' }
+        };
+
+        const chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+        chart.draw(dataTable, options);
+      }
+    </script>
+  </body>
+</html>

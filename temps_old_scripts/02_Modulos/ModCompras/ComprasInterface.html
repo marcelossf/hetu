@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      :root {
+        --hetu-primary: #4A154B;
+        --hetu-primary-hover: #370F38;
+        --hetu-secondary: #611F69;
+        --hetu-accent: #007A5A;
+        --hetu-accent-hover: #005A42;
+        --hetu-bg: #F8F9FA;
+        --hetu-surface: #FFFFFF;
+        --hetu-border: #E0E0E0;
+        --hetu-text: #1D1C1D;
+        --hetu-text-muted: #616061;
+        --hetu-danger: #E01E5A;
+      }
+
+      /* Layout Fixo da Janela */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--hetu-bg);
+        color: var(--hetu-text);
+      }
+
+      .main-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        box-sizing: border-box;
+        padding: 10px;
+      }
+
+      /* Topo Fixo */
+      .header-brand {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--hetu-primary);
+        color: #FFF;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+      .header-brand .logo-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: bold;
+        font-size: 15px;
+      }
+      .header-brand .logo-badge {
+        background: #FFF;
+        color: var(--hetu-primary);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      /* Corpo com Rolagem Overflow */
+      .scrollable-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+        margin-bottom: 8px;
+      }
+
+      /* Rodapé Fixo com Botões */
+      .fixed-bottom {
+        flex-shrink: 0;
+        background: var(--hetu-surface);
+        border-top: 2px solid var(--hetu-border);
+        padding: 10px;
+        border-radius: 6px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      }
+
+      .row { display: flex; gap: 10px; margin-bottom: 8px; }
+      .col { flex: 1; }
+
+      label { 
+        display: block; 
+        font-size: 11px; 
+        font-weight: 600; 
+        margin-bottom: 3px; 
+        color: var(--hetu-text);
+      }
+      
+      input, select { 
+        width: 100%; 
+        padding: 6px; 
+        box-sizing: border-box; 
+        border: 1px solid var(--hetu-border); 
+        border-radius: 4px; 
+        font-size: 12px; 
+        background-color: #FFF;
+        color: var(--hetu-text);
+        outline: none;
+      }
+      input:focus, select:focus {
+        border-color: var(--hetu-primary);
+        box-shadow: 0 0 0 1px var(--hetu-primary);
+      }
+
+      .fieldset { 
+        border: 1px solid var(--hetu-border); 
+        padding: 10px; 
+        border-radius: 6px; 
+        margin-bottom: 8px; 
+        background: var(--hetu-surface); 
+      }
+      .fieldset legend { 
+        font-size: 11px; 
+        font-weight: 700; 
+        color: var(--hetu-primary); 
+        padding: 0 5px; 
+      }
+
+      table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+      th, td { border: 1px solid var(--hetu-border); padding: 5px; text-align: left; font-size: 11px; }
+      th { background-color: #F4F4F4; color: var(--hetu-text-muted); font-weight: 700; }
+      
+      .btn-del-row { color: var(--hetu-danger); cursor: pointer; font-weight: bold; text-align: center; }
+
+      .actions { text-align: right; }
+      .btn { padding: 7px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+      .btn-save { background-color: var(--hetu-accent); color: white; }
+      .btn-save:hover { background-color: var(--hetu-accent-hover); }
+      .btn-cancel { background-color: #E8E8E8; color: var(--hetu-text); margin-right: 5px; }
+      .btn-cancel:hover { background-color: #D8D8D8; }
+      .btn-add { background-color: var(--hetu-secondary); color: white; padding: 4px 8px; font-size: 11px; margin-top: 5px; }
+
+      .btn-save:disabled {
+        background-color: #a0a0a0 !important;
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+    </style>
+  </head>
+  <body>
+
+    <div class="main-container">
+      <!-- 1. TOPO FIXO -->
+      <div class="header-brand">
+        <div class="logo-title">
+          <span class="logo-badge">HETU</span>
+          <span>Lançamento de Compras</span>
+        </div>
+      </div>
+
+      <!-- 2. CORPO ROLÁVEL -->
+      <div class="scrollable-content">
+        <form id="formCompras">
+          
+          <!-- Dados da Compra -->
+          <div class="fieldset">
+            <legend>Informações da Compra</legend>
+            <div class="row">
+              <div class="col">
+                <label for="dataCompra">Data da Compra:*</label>
+                <input type="date" id="dataCompra" required>
+              </div>
+              <div class="col" style="flex: 2;">
+                <label for="fornecedor">Fornecedor:*</label>
+                <select id="fornecedor" required>
+                  <option value="">Carregando fornecedores...</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Itens da Compra -->
+          <div class="fieldset">
+            <legend>Itens Comprados</legend>
+            <table id="tabelaItens">
+              <thead>
+                <tr>
+                  <th style="width: 40%;">Insumo</th>
+                  <th style="width: 15%;">Unidade</th>
+                  <th style="width: 20%;">Qtd Comprada</th>
+                  <th style="width: 20%;">Preço Pago (R$)</th>
+                  <th style="width: 5%;">X</th>
+                </tr>
+              </thead>
+              <tbody id="corpoTabela">
+                <!-- Linhas dinâmicas -->
+              </tbody>
+            </table>
+            <button type="button" class="btn btn-add" onclick="adicionarLinhaItem()">+ Adicionar Insumo</button>
+          </div>
+
+        </form>
+      </div>
+
+      <!-- 3. RODAPÉ FIXO -->
+      <div class="fixed-bottom">
+        <div class="actions">
+          <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Fechar</button>
+          <button type="button" class="btn btn-save" onclick="salvarFormulario()">Salvar Compras</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let listaInsumosGlobal = [];
+      let listaFornecedoresGlobal = [];
+
+      document.getElementById('dataCompra').valueAsDate = new Date();
+
+      window.onload = function() {
+        google.script.run
+          .withSuccessHandler(inicializarFormulario)
+          .obterDadosParaFormularioCompras();
+      };
+
+      function inicializarFormulario(dados) {
+        listaInsumosGlobal = (dados && dados.insumos) ? dados.insumos : [];
+        listaFornecedoresGlobal = (dados && dados.fornecedores) ? dados.fornecedores : [];
+
+        let selectForn = document.getElementById('fornecedor');
+        selectForn.innerHTML = '<option value="">Selecione um Fornecedor...</option>';
+        listaFornecedoresGlobal.forEach(f => {
+          let nome = typeof f === 'object' ? f.nome : f;
+          selectForn.innerHTML += `<option value="${nome}">${nome}</option>`;
+        });
+
+        if (document.querySelectorAll('#corpoTabela tr').length === 0) {
+          adicionarLinhaItem();
+        }
+      }
+
+      function adicionarLinhaItem() {
+        let tbody = document.getElementById('corpoTabela');
+        if (!tbody) return;
+
+        let tr = document.createElement('tr');
+        tr.className = 'linha-item-compra';
+
+        let optionsInsumos = '<option value="">Selecione...</option>';
+        const lista = Array.isArray(listaInsumosGlobal) ? listaInsumosGlobal : [];
+        
+        lista.forEach(ins => {
+          let nome = typeof ins === 'object' ? ins.nome : ins;
+          let unidade = typeof ins === 'object' ? (ins.unidade || '-') : '-';
+          optionsInsumos += `<option value="${nome}" data-unidade="${unidade}">${nome}</option>`;
+        });
+
+        tr.innerHTML = `
+          <td>
+            <select class="input-insumo" onchange="atualizarUnidade(this)">
+              ${optionsInsumos}
+            </select>
+          </td>
+          <td><input type="text" class="input-unidade" value="-" readonly></td>
+          <td><input type="number" class="input-qtd" step="any" min="0.001" placeholder="0"></td>
+          <td><input type="number" class="input-preco" step="0.01" min="0.01" placeholder="0,00"></td>
+          <td class="btn-del-row" onclick="removerLinha(this)">×</td>
+        `;
+
+        tbody.appendChild(tr);
+      }
+
+      function removerLinha(elem) {
+        let tbody = document.getElementById('corpoTabela');
+        if (tbody.children.length > 1) {
+          elem.parentElement.remove();
+        } else {
+          alert('O formulário precisa ter pelo menos 1 item!');
+        }
+      }
+
+      function atualizarUnidade(selectElement) {
+        let selectedOption = selectElement.options[selectElement.selectedIndex];
+        let unidade = selectedOption.getAttribute('data-unidade') || '-';
+        let row = selectElement.closest('tr');
+        let inputUnidade = row.querySelector('.input-unidade');
+        if (inputUnidade) {
+          inputUnidade.value = unidade;
+        }
+      }
+
+      function salvarFormulario() {
+        const btnSalvar = document.querySelector('.btn-save');
+
+        const inputFornecedor = document.getElementById('fornecedor');
+        const inputData = document.getElementById('dataCompra');
+
+        const nomeFornecedor = inputFornecedor ? inputFornecedor.value.trim() : "";
+        const dataCompra = inputData ? inputData.value : "";
+
+        if (!nomeFornecedor) {
+          alert("Por favor, selecione ou informe o Nome do Fornecedor!");
+          return;
+        }
+
+        if (!dataCompra) {
+          alert("Por favor, informe a Data da Compra!");
+          return;
+        }
+
+        const itens = [];
+        const linhasItens = document.querySelectorAll('.linha-item-compra'); 
+
+        linhasItens.forEach(linha => {
+          const nomeInsumo = linha.querySelector('.input-insumo')?.value || "";
+          const qtd = parseFloat(linha.querySelector('.input-qtd')?.value) || 0;
+          const unidade = linha.querySelector('.input-unidade')?.value || "";
+          const preco = parseFloat(linha.querySelector('.input-preco')?.value) || 0;
+
+          if (nomeInsumo && qtd > 0 && preco > 0) {
+            itens.push({ nomeInsumo, qtd, unidade, preco });
+          }
+        });
+
+        if (itens.length === 0) {
+          alert("Adicione pelo menos um insumo válido com Quantidade e Preço maiores que zero!");
+          return;
+        }
+
+        if (btnSalvar) {
+          btnSalvar.disabled = true;
+          btnSalvar.innerText = 'Salvando compras...';
+        }
+
+        const payload = {
+          nomeFornecedor: nomeFornecedor,
+          dataCompra: dataCompra,
+          itens: itens
+        };
+
+        google.script.run
+          .withSuccessHandler(function(resposta) {
+            alert(typeof resposta === 'object' ? (resposta.mensagem || 'Salvo com sucesso!') : resposta);
+            // google.script.host.close();
+          })
+          .withFailureHandler(function(erro) {
+            alert('Erro ao salvar: ' + erro.message);
+            if (btnSalvar) {
+              btnSalvar.disabled = false;
+              btnSalvar.innerText = 'Salvar Compras';
+            }
+          })
+          .processarComprasHTML(payload);
+      }
+    </script>
+  </body>
+</html>

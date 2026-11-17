@@ -6,8 +6,8 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F4F1EA",
-  "theme_color": "#1E3F20",
+  "background_color": "#F7F5F2",
+  "theme_color": "#1F3D2B",
   "icons": [
     {
       "src": "/hetu-icon-192.png",

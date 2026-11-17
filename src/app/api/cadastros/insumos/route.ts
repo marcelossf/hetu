@@ -1,4 +1,4 @@
-import { createNotImplementedHandler } from "@/lib/api/not-implemented";
+import { createProtectedNotImplementedHandler } from "@/lib/api/not-implemented";
 
-export const GET = createNotImplementedHandler("cadastros/insumos");
-export const POST = createNotImplementedHandler("cadastros/insumos");
+export const GET = createProtectedNotImplementedHandler("cadastros/insumos");
+export const POST = createProtectedNotImplementedHandler("cadastros/insumos");

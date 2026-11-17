@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body { font-family: Arial, sans-serif; padding: 15px; color: #333; background-color: #f8f9fa; }
+      
+      .tabs { display: flex; border-bottom: 2px solid #ccc; margin-bottom: 15px; }
+      .tab-btn { flex: 1; padding: 10px; border: none; background: #e9ecef; cursor: pointer; font-weight: bold; color: #495057; }
+      .tab-btn.active { background: #1a73e8; color: white; }
+      
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+
+      .form-group { margin-bottom: 12px; }
+      label { display: block; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+      input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+      
+      .actions { margin-top: 20px; text-align: right; }
+      .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 13px; }
+      .btn-save { background-color: #28a745; color: white; }
+      .btn-cancel { background-color: #6c757d; color: white; margin-right: 5px; }
+    </style>
+  </head>
+  <body>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="alternarAba('novo')">Novo Fornecedor</button>
+      <button class="tab-btn" onclick="alternarAba('editar')">Editar / Consultar</button>
+    </div>
+
+    <!-- ABA 1: CADASTRAR -->
+    <div id="tabNovo" class="tab-content active">
+      <form id="formNovo">
+        <div class="form-group">
+          <label for="novoNome">Nome do Fornecedor:</label>
+          <input type="text" id="novoNome" placeholder="Ex: Distribuidora Silva" required>
+        </div>
+        <div class="form-group">
+          <label for="novoEndereco">Endereço / Contato:</label>
+          <input type="text" id="novoEndereco" placeholder="Ex: Rua A, 123 - (81) 99999-9999" required>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Cancelar</button>
+          <button type="submit" class="btn btn-save">Cadastrar</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- ABA 2: EDITAR / ATUALIZAR -->
+    <div id="tabEditar" class="tab-content">
+      <form id="formEditar">
+        <div class="form-group">
+          <label for="selectFornecedor">Selecione o Fornecedor:</label>
+          <select id="selectFornecedor" onchange="carregarDadosEdicao()" required>
+            <option value="">Carregando fornecedores...</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="editNome">Nome do Fornecedor:</label>
+          <input type="text" id="editNome" required>
+        </div>
+
+        <div class="form-group">
+          <label for="editEndereco">Endereço / Contato:</label>
+          <input type="text" id="editEndereco" required>
+        </div>
+
+        <div class="form-group">
+          <label for="editAtivo">Status:</label>
+          <select id="editAtivo" required>
+            <option value="Sim">Sim (Ativo)</option>
+            <option value="Não">Não (Inativo)</option>
+          </select>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Cancelar</button>
+          <button type="submit" class="btn btn-save">Atualizar</button>
+        </div>
+      </form>
+    </div>
+
+    <script>
+      let listaFornecedoresGlobal = [];
+
+      window.onload = function() {
+        carregarListaFornecedores();
+      };
+
+      function alternarAba(aba) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        if (aba === 'novo') {
+          document.querySelectorAll('.tab-btn')[0].classList.add('active');
+          document.getElementById('tabNovo').classList.add('active');
+        } else {
+          document.querySelectorAll('.tab-btn')[1].classList.add('active');
+          document.getElementById('tabEditar').classList.add('active');
+        }
+      }
+
+      function carregarListaFornecedores() {
+        google.script.run
+          .withSuccessHandler(function(lista) {
+            listaFornecedoresGlobal = lista;
+            let select = document.getElementById('selectFornecedor');
+            select.innerHTML = '<option value="">Selecione para editar...</option>';
+            
+            lista.forEach(f => {
+              select.innerHTML += `<option value="${f.nome}">${f.nome}</option>`;
+            });
+          })
+          .obterTodosFornecedores();
+      }
+
+      function carregarDadosEdicao() {
+        let nomeSelecionado = document.getElementById('selectFornecedor').value;
+        let forn = listaFornecedoresGlobal.find(f => f.nome === nomeSelecionado);
+
+        if (forn) {
+          document.getElementById('editNome').value = forn.nome;
+          document.getElementById('editEndereco').value = forn.endereco;
+          document.getElementById('editAtivo').value = forn.ativo || "Sim";
+        } else {
+          document.getElementById('editNome').value = "";
+          document.getElementById('editEndereco').value = "";
+          document.getElementById('editAtivo').value = "Sim";
+        }
+      }
+
+      // Submit do formulário de Cadastro
+      document.getElementById('formNovo').addEventListener('submit', function(e) {
+        e.preventDefault();
+        let payload = {
+          nome: document.getElementById('novoNome').value,
+          endereco: document.getElementById('novoEndereco').value
+        };
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            alert(res.mensagem);
+            if (res.sucesso) google.script.host.close();
+          })
+          .criarFornecedorHTML(payload);
+      });
+
+      // Submit do formulário de Edição
+      document.getElementById('formEditar').addEventListener('submit', function(e) {
+        e.preventDefault();
+        let payload = {
+          nomeAntigo: document.getElementById('selectFornecedor').value,
+          nomeNovo: document.getElementById('editNome').value,
+          endereco: document.getElementById('editEndereco').value,
+          ativo: document.getElementById('editAtivo').value
+        };
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            alert(res.mensagem);
+            if (res.sucesso) google.script.host.close();
+          })
+          .atualizarFornecedorHTML(payload);
+      });
+    </script>
+  </body>
+</html>

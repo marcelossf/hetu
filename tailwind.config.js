@@ -4,9 +4,10 @@ module.exports = {
     extend: {
       colors: {
         hetu: {
-          green: "#1E3F20",
-          cream: "#F4F1EA",
-          text: "#2C3E30",
+          green: "#1F3D2B",
+          cream: "#F7F5F2",
+          text: "#2A2A2A",
+          gold: "#C2A46D",
         },
       },
     },

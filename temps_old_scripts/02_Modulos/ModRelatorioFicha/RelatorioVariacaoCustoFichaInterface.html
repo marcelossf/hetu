@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+  <style>
+    :root {
+      --hetu-primary: #4A154B;
+      --hetu-secondary: #611F69;
+      --hetu-accent: #007A5A;
+      --hetu-bg: #F8F9FA;
+      --hetu-surface: #FFFFFF;
+      --hetu-border: #E0E0E0;
+      --hetu-text: #1D1C1D;
+      --hetu-text-muted: #616061;
+      --hetu-danger: #E01E5A;
+    }
+
+    html,
+    body {
+      height: 120%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--hetu-bg);
+      color: var(--hetu-text);
+    }
+
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      height: 120vh;
+      box-sizing: border-box;
+      padding: 10px;
+    }
+
+    .header-brand {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      background: var(--hetu-primary);
+      color: #FFF;
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .logo-badge {
+      background: #FFF;
+      color: var(--hetu-primary);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      margin-right: 10px;
+    }
+
+    .scrollable-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+
+    .fieldset {
+      border: 1px solid var(--hetu-border);
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background: var(--hetu-surface);
+    }
+
+    .fieldset legend {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--hetu-primary);
+      padding: 0 5px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .col {
+      flex: 1;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+      border: 1px solid var(--hetu-border);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--hetu-border);
+      padding: 6px;
+      text-align: left;
+      font-size: 11px;
+    }
+
+    th {
+      background-color: #F4F4F4;
+      color: var(--hetu-text-muted);
+    }
+
+    #chart_div {
+      width: 100%;
+      height: 200px;
+      margin-top: 5px;
+    }
+
+    .badge-pos {
+      color: var(--hetu-danger);
+      font-weight: bold;
+    }
+
+    .badge-neg {
+      color: var(--hetu-accent);
+      font-weight: bold;
+    }
+
+    .btn {
+      padding: 7px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    .btn-search {
+      background-color: var(--hetu-primary);
+      color: white;
+      width: 100%;
+    }
+
+    .btn-cancel {
+      background-color: #E8E8E8;
+      color: var(--hetu-text);
+    }
+
+    .fixed-bottom {
+      flex-shrink: 0;
+      background: var(--hetu-surface);
+      border-top: 2px solid var(--hetu-border);
+      padding: 10px;
+      text-align: right;
+      border-radius: 6px;
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: var(--hetu-text-muted);
+      font-size: 12px;
+      padding: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="main-container">
+    <div class="header-brand">
+      <span class="logo-badge">HETU</span>
+      <span style="font-weight: bold; font-size: 15px;">Variação de Custo por Produto</span>
+    </div>
+
+    <div class="scrollable-content">
+      <!-- Filtros -->
+      <div class="fieldset">
+        <!-- <legend>Filtros de Pesquisa</legend> -->
+        <div class="row">
+          <div class="col" style="flex: 1.5;">
+            <label for="ficha">Produto:*</label>
+            <select id="ficha" onchange="carregarInsumosDaFicha()">
+                <option value="">Carregando produtos...</option>
+              </select>
+          </div>
+          <div class="col" style="flex: 1.5;">
+            <label for="insumo">Insumo Impactante:</label>
+            <select id="insumo" disabled>
+                <option value="">-- Todos os Insumos --</option>
+              </select>
+          </div>
+          <div class="col">
+            <label for="dataInicio">Data Inicial:*</label>
+            <input type="date" id="dataInicio">
+          </div>
+          <div class="col">
+            <label for="dataFim">Data Final:*</label>
+            <input type="date" id="dataFim">
+          </div>
+          <div class="col" style="flex: 0.8;">
+            <button type="button" class="btn btn-search" onclick="filtrar()">Buscar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gráfico -->
+      <div class="fieldset">
+        <legend>Evolução do Custo Total da Ficha (R$)</legend>
+        <div id="chart_div">
+          <div class="empty-msg">Selecione os filtros e clique em Buscar.</div>
+        </div>
+      </div>
+
+      <!-- Tabela -->
+      <div class="fieldset">
+        <legend>Detalhamento dos Impactos</legend>
+        <table>
+          <thead>
+            <tr>
+              <th>Data</th>
+              <th>Insumo Alterado</th>
+              <th>Preço Ant.</th>
+              <th>Preço Novo</th>
+              <th>Impacto (R$)</th>
+              <th>Novo Custo Ficha</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabela">
+            <tr>
+              <td colspan="6" class="empty-msg">Nenhum dado consultado.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="fixed-bottom">
+      <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Fechar</button>
+    </div>
+  </div>
+
+  <script>
+    google.charts.load('current', {'packages':['corechart']});
+
+      let dadosCompletosResultado = [];
+      let cacheFichasEInsumos = [];
+
+      const hoje = new Date();
+      const trintaDiasAtras = new Date();
+      trintaDiasAtras.setDate(hoje.getDate() - 30);
+
+      document.getElementById('dataFim').valueAsDate = hoje;
+      document.getElementById('dataFim').max = hoje.toISOString().split("T")[0];
+      document.getElementById('dataInicio').valueAsDate = trintaDiasAtras;
+
+      window.onload = function() {
+        google.script.run
+          .withSuccessHandler(preencherFichas)
+          .obterDadosIniciaisRelatorioFicha();
+      };
+
+      function preencherFichas(dados) {
+        const select = document.getElementById('ficha');
+        select.innerHTML = '<option value="">Selecione uma ficha...</option>';
+        if (dados && dados.fichas) {
+          cacheFichasEInsumos = dados.fichas;
+          dados.fichas.forEach(f => {
+            select.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
+          });
+        }
+      }
+
+      function carregarInsumosDaFicha() {
+        const idFicha = document.getElementById('ficha').value;
+        const selectInsumo = document.getElementById('insumo');
+        
+        selectInsumo.innerHTML = '<option value="">-- Todos os Insumos --</option>';
+        
+        if (!idFicha) {
+          selectInsumo.disabled = true;
+          return;
+        }
+
+        const fichaEncontrada = cacheFichasEInsumos.find(f => String(f.id) === String(idFicha));
+        
+        if (fichaEncontrada && fichaEncontrada.insumos) {
+          fichaEncontrada.insumos.forEach(ins => {
+            selectInsumo.innerHTML += `<option value="${ins.nome}">${ins.nome}</option>`;
+          });
+          selectInsumo.disabled = false;
+        } else {
+          // Caso a estrutura venha via requisição de backend separada:
+          google.script.run
+            .withSuccessHandler(function(insumos) {
+              if (insumos && insumos.length > 0) {
+                insumos.forEach(ins => {
+                  selectInsumo.innerHTML += `<option value="${ins.nome}">${ins.nome}</option>`;
+                });
+                selectInsumo.disabled = false;
+              }
+            })
+            .obterInsumosPorFicha(idFicha);
+        }
+      }
+
+      function filtrar() {
+        const idFicha = document.getElementById('ficha').value;
+        const dataInicio = document.getElementById('dataInicio').value;
+        const dataFim = document.getElementById('dataFim').value;
+        const insumoSel = document.getElementById('insumo').value;
+
+        if (!idFicha) {
+          alert('Por favor, selecione uma ficha técnica!');
+          return;
+        }
+        if (!dataInicio || !dataFim) {
+          alert('Por favor, selecione o período!');
+          return;
+        }
+
+        const btn = document.querySelector('.btn-search');
+        btn.disabled = true;
+        btn.innerText = 'Buscando...';
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            btn.disabled = false;
+            btn.innerText = 'Buscar';
+            dadosCompletosResultado = res.dados || [];
+            aplicarFiltroEExibir();
+          })
+          .withFailureHandler(function(err) {
+            alert('Erro: ' + err.message);
+            btn.disabled = false;
+            btn.innerText = 'Buscar';
+          })
+          .consultarHistoricoFicha({ idFicha, dataInicio, dataFim, insumo: insumoSel });
+      }
+
+      function aplicarFiltroEExibir() {
+        const insumoSel = document.getElementById('insumo').value;
+        
+        let dadosFiltrados = dadosCompletosResultado;
+        if (insumoSel) {
+          dadosFiltrados = dadosCompletosResultado.filter(item => item.insumoAlterado === insumoSel);
+        }
+
+        exibirResultado(dadosFiltrados);
+      }
+
+      function exibirResultado(dados) {
+        const tbody = document.getElementById('corpoTabela');
+        tbody.innerHTML = '';
+
+        if (!dados || dados.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">Nenhuma alteração de custo registrada para este filtro no período.</td></tr>';
+          document.getElementById('chart_div').innerHTML = '<div class="empty-msg">Sem dados para gerar gráfico.</div>';
+          return;
+        }
+
+        dados.forEach(item => {
+          const sinal = item.impactoDiferenca > 0 ? '+' : '';
+          const classeImpacto = item.impactoDiferenca > 0 ? 'badge-pos' : (item.impactoDiferenca < 0 ? 'badge-neg' : '');
+
+          tbody.innerHTML += `
+            <tr>
+              <td>${item.data}</td>
+              <td>${item.insumoAlterado}</td>
+              <td>R$ ${item.precoAnterior.toFixed(2)}</td>
+              <td>R$ ${item.precoNovo.toFixed(2)}</td>
+              <td class="${classeImpacto}">${sinal}R$ ${item.impactoDiferenca.toFixed(2)}</td>
+              <td><b>R$ ${item.novoCustoTotal.toFixed(2)}</b></td>
+            </tr>
+          `;
+        });
+
+        desenharGrafico(dados);
+      }
+
+      function desenharGrafico(dados) {
+        const dataTable = new google.visualization.DataTable();
+        dataTable.addColumn('string', 'Data');
+        dataTable.addColumn('number', 'Custo Total Ficha (R$)');
+
+        dados.forEach(d => {
+          dataTable.addRow([d.data.split(' ')[0], d.novoCustoTotal]);
+        });
+
+        const options = {
+          legend: { position: 'none' },
+          colors: ['#611F69'],
+          hAxis: { title: 'Data da Alteração', textStyle: { fontSize: 10 } },
+          vAxis: { title: 'Custo Total (R$)', textStyle: { fontSize: 10 } },
+          chartArea: { width: '85%', height: '70%' }
+        };
+
+        const chart = new google.visualization.LineChart(document.getElementById('chart_div'));
+        chart.draw(dataTable, options);
+      }
+  </script>
+</body>
+
+</html>

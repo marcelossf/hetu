@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <base target="_top">
+  <style>
+    :root {
+      --hetu-primary: #4A154B;
+      --hetu-secondary: #611F69;
+      --hetu-accent: #007A5A;
+      --hetu-accent-hover: #005A42;
+      --hetu-bg: #F8F9FA;
+      --hetu-surface: #FFFFFF;
+      --hetu-border: #E0E0E0;
+      --hetu-text: #1D1C1D;
+      --hetu-text-muted: #616061;
+      --hetu-danger: #E01E5A;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--hetu-bg);
+      color: var(--hetu-text);
+    }
+
+    .main-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      box-sizing: border-box;
+      padding: 10px;
+    }
+
+    .header-brand {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      background: var(--hetu-primary);
+      color: #FFF;
+      padding: 10px 15px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+    }
+
+    .logo-badge {
+      background: #FFF;
+      color: var(--hetu-primary);
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 800;
+      margin-right: 10px;
+    }
+
+    .scrollable-content {
+      flex: 1;
+      overflow-y: auto;
+      padding-right: 5px;
+    }
+
+    .fieldset {
+      border: 1px solid var(--hetu-border);
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 8px;
+      background: var(--hetu-surface);
+    }
+
+    .fieldset legend {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--hetu-primary);
+      padding: 0 5px;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: flex-end;
+    }
+
+    .col {
+      flex: 1;
+    }
+
+    label {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+      border: 1px solid var(--hetu-border);
+      border-radius: 4px;
+      font-size: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5px;
+    }
+
+    th,
+    td {
+      border: 1px solid var(--hetu-border);
+      padding: 6px;
+      text-align: left;
+      font-size: 11px;
+    }
+
+    th {
+      background-color: #F4F4F4;
+      color: var(--hetu-text-muted);
+    }
+
+    .badge-ok {
+      color: var(--hetu-accent);
+      font-weight: bold;
+    }
+
+    .badge-falta {
+      color: var(--hetu-danger);
+      font-weight: bold;
+    }
+
+    .summary-box {
+      display: flex;
+      justify-content: space-between;
+      background: #F0E6F0;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      color: var(--hetu-primary);
+    }
+
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 12px;
+    }
+
+    .btn-save {
+      background-color: var(--hetu-accent);
+      color: white;
+    }
+
+    .btn-save:hover {
+      background-color: var(--hetu-accent-hover);
+    }
+
+    .btn-cancel {
+      background-color: #E8E8E8;
+      color: var(--hetu-text);
+      margin-right: 5px;
+    }
+
+    .fixed-bottom {
+      flex-shrink: 0;
+      background: var(--hetu-surface);
+      border-top: 2px solid var(--hetu-border);
+      padding: 10px;
+      text-align: right;
+      border-radius: 6px;
+    }
+
+    .empty-msg {
+      text-align: center;
+      color: var(--hetu-text-muted);
+      font-size: 12px;
+      padding: 15px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="main-container">
+    <div class="header-brand">
+      <span class="logo-badge">HETU</span>
+      <span style="font-weight: bold; font-size: 15px;">Calculadora & Ordem de Produção</span>
+    </div>
+
+    <div class="scrollable-content">
+      <!-- Parâmetros da Batida -->
+      <div class="fieldset">
+        <legend>Parâmetros da Batida</legend>
+        <div class="row">
+          <div class="col" style="flex: 2;">
+            <label for="ficha">Produto / Ficha Técnica:*</label>
+            <select id="ficha" onchange="carregarFichaBase()">
+                <option value="">Carregando produtos...</option>
+              </select>
+          </div>
+          <div class="col">
+            <label for="rendimento">Rendimento Desejado (Qtd):*</label>
+            <input type="number" id="rendimento" value="1" min="0.01" step="any" oninput="recalcularEExibir()">
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabela de Insumos da Batida -->
+      <div class="fieldset">
+        <legend>Necessidade de Insumos (Calculado Dinamicamente)</legend>
+        <table>
+          <thead>
+            <tr>
+              <th>Insumo</th>
+              <th>Qtd Necessária</th>
+              <th>Unidade</th>
+              <th>Estoque Atual</th>
+              <th>Custo Total (R$)</th>
+              <th>Status Estoque</th>
+            </tr>
+          </thead>
+          <tbody id="corpoTabela">
+            <tr>
+              <td colspan="6" class="empty-msg">Selecione um produto para simular.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="summary-box">
+          <span>Custo Unitário: <span id="lblCustoUnit">R$ 0,00</span></span>
+          <span>CUSTO TOTAL DO LOTE: <span id="lblCustoTotal">R$ 0,00</span></span>
+        </div>
+      </div>
+
+      <!-- Observações -->
+      <div class="fieldset">
+        <legend>Observações do Lote</legend>
+        <input type="text" id="observacao" placeholder="Ex: Lote #102, fabricado na cozinha B">
+      </div>
+    </div>
+
+    <!-- Rodapé -->
+    <div class="fixed-bottom">
+      <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Cancelar</button>
+      <button type="button" id="btnSalvarProducao" class="btn btn-save" onclick="submeterProducao()">Confirmar & Registrar Produção</button>
+    </div>
+  </div>
+
+  <script>
+    // Guarda em memória os dados originais da ficha (1 unidade) trazidos do servidor
+  let dadosFichaOriginal = null;
+
+  window.onload = function() {
+    google.script.run
+      .withSuccessHandler(preencherFichas)
+      .obterDadosIniciaisProducao();
+  };
+
+  function preencherFichas(dados) {
+    const select = document.getElementById('ficha');
+    select.innerHTML = '<option value="">Selecione um produto...</option>';
+    if (dados && dados.fichas) {
+      dados.fichas.forEach(f => {
+        select.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
+      });
+    }
+  }
+
+  // Chamada quando o usuário troca o Produto no <select>
+  function carregarFichaBase() {
+    const idFicha = document.getElementById('ficha').value;
+    const rendInput = document.getElementById('rendimento');
+
+    if (!idFicha) {
+      limparTabela();
+      dadosFichaOriginal = null;
+      return;
+    }
+
+    // Busca no servidor os dados base da ficha (considerando rendimento = 1)
+    google.script.run
+      .withSuccessHandler(function(res) {
+        dadosFichaOriginal = res; // Salva o snapshot com os valores unitários originais
+        recalcularEExibir();      // Executa o cálculo para a quantidade atual do input
+      })
+      .obterDetalhamentoCalculoProducao(idFicha, 1);
+  }
+
+  // Chamada no evento 'oninput' do campo Rendimento (Roda 100% local, instantâneo)
+  function recalcularEExibir() {
+    if (!dadosFichaOriginal) return;
+
+    const rendimento = parseFloat(document.getElementById('rendimento').value) || 0;
+    const tbody = document.getElementById('corpoTabela');
+    tbody.innerHTML = '';
+
+    if (rendimento <= 0) {
+      limparTabela('Informe um rendimento maior que zero.');
+      return;
+    }
+
+    if (!dadosFichaOriginal.itens || dadosFichaOriginal.itens.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="empty-msg">Esta ficha não possui insumos cadastrados.</td></tr>';
+      return;
+    }
+
+    // Multiplica o snapshot da base unitária fixa pelo novo rendimento
+    let custoTotalLote = 0;
+
+    dadosFichaOriginal.itens.forEach(itemUnitario => {
+      // itemUnitario.qtdNecessaria é a quantidade para 1 unidade (fixa na memória)
+      const qtdNecessariaLote = itemUnitario.qtdNecessaria * rendimento;
+      const custoTotalInsumo = qtdNecessariaLote * itemUnitario.custoUnitario;
+      const estoqueSuficiente = itemUnitario.estoqueAtual >= qtdNecessariaLote;
+
+      custoTotalLote += custoTotalInsumo;
+
+      const statusHtml = estoqueSuficiente 
+        ? '<span class="badge-ok">✓ Suficiente</span>' 
+        : '<span class="badge-falta">⚠ Falta Insumo</span>';
+
+      tbody.innerHTML += `
+        <tr>
+          <td>${itemUnitario.nome}</td>
+          <td><b>${qtdNecessariaLote.toFixed(4)}</b></td>
+          <td>${itemUnitario.unidade}</td>
+          <td>${itemUnitario.estoqueAtual.toFixed(2)} ${itemUnitario.unidade}</td>
+          <td>R$ ${custoTotalInsumo.toFixed(2)}</td>
+          <td>${statusHtml}</td>
+        </tr>
+      `;
+    });
+
+    const custoUnitarioCalculado = dadosFichaOriginal.custoUnitario;
+    document.getElementById('lblCustoUnit').innerText = `R$ ${custoUnitarioCalculado.toFixed(2)}`;
+    document.getElementById('lblCustoTotal').innerText = `R$ ${(custoUnitarioCalculado * rendimento).toFixed(2)}`;
+  }
+
+  function limparTabela(msg = 'Selecione um produto para simular.') {
+    document.getElementById('corpoTabela').innerHTML = `<tr><td colspan="6" class="empty-msg">${msg}</td></tr>`;
+    document.getElementById('lblCustoUnit').innerText = 'R$ 0,00';
+    document.getElementById('lblCustoTotal').innerText = 'R$ 0,00';
+  }
+
+  function submeterProducao() {
+    const idFicha = document.getElementById('ficha').value;
+    const rendimento = parseFloat(document.getElementById('rendimento').value);
+    const observacao = document.getElementById('observacao').value;
+
+    if (!idFicha || !rendimento || rendimento <= 0) {
+      alert('Por favor, selecione um produto e informe a quantidade produzida!');
+      return;
+    }
+
+    const btn = document.getElementById('btnSalvarProducao');
+    btn.disabled = true;
+    btn.innerText = 'Registrando produção...';
+
+    google.script.run
+      .withSuccessHandler(function(resposta) {
+        alert(resposta.mensagem || 'Produção registrada com sucesso!');
+        google.script.host.close();
+      })
+      .withFailureHandler(function(erro) {
+        alert('Erro ao registrar produção: ' + erro.message);
+        btn.disabled = false;
+        btn.innerText = 'Confirmar & Registrar Produção';
+      })
+      .registrarProducao(idFicha, rendimento, observacao);
+  }
+  </script>
+</body>
+
+</html>

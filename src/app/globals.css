@@ -2,18 +2,42 @@
 @config "../../tailwind.config.js";
 
 :root {
-  --background: #F4F1EA;
-  --foreground: #2C3E30;
+  --background: #F7F5F2;
+  --foreground: #2A2A2A;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-hetu-green: #1E3F20;
-  --color-hetu-cream: #F4F1EA;
-  --color-hetu-text: #2C3E30;
+  --color-hetu-green: #1F3D2B;
+  --color-hetu-cream: #F7F5F2;
+  --color-hetu-text: #2A2A2A;
+  --color-hetu-gold: #C2A46D;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+@keyframes hetu-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.88;
+    transform: scale(1.025);
+  }
+}
+
+.animate-hetu-pulse {
+  animation: hetu-pulse 2.4s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hetu-pulse {
+    animation: none;
+  }
 }
 
 body {

@@ -1,83 +1,30 @@
 # Diretrizes do GitHub Copilot — Gestão Hetu
 
-Estas diretrizes são obrigatórias para todo trabalho neste repositório, tanto
-nas respostas quanto no código gerado. Siga também as instruções aplicáveis
-existentes no repositório e consulte [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
-para o contexto arquitetural detalhado.
+Estas diretrizes são obrigatórias para todo trabalho neste repositório, tanto nas respostas quanto no código gerado. Consulte também [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md) para o contexto arquitetural detalhado e [docs/DATABASE_SCHEMA.md](../docs/DATABASE_SCHEMA.md) para o schema do banco.
 
-## Padrão de código
+## Storytelling e Contexto do Projeto
+- **O que é o Hetu:** Sistema de gestão de custos, engenharia de produtos (fichas técnicas), produção e vendas voltado para o setor de fabricação artesanal (como velas aromáticas e cosméticos).
+- **Propósito:** Automatizar o cálculo de custos de insumos, gerenciar estoque real, padronizar compras e fornecer alta performance via Next.js PWA (instalável no celular e acessível no PC).
 
-- Use TypeScript estrito e preserve a segurança de tipos. Evite `any`, casts
-  inseguros e supressões de erros; prefira tipos explícitos, validações e
-  narrowing.
-- Escreva código limpo, legível e modular. Prefira componentes reutilizáveis
-  com responsabilidades bem definidas e evite duplicação.
-- Faça alterações focadas, compatíveis com os padrões existentes e sem mudanças
-  não relacionadas ao pedido.
-- Ao concluir uma alteração, informe claramente o que foi feito e quais
-  verificações foram executadas; não afirme que algo foi testado se não foi.
+## Padrão de Código e TypeScript
+- Use TypeScript estrito e preserve a segurança de tipos. **Proibido o uso de `any`**, casts inseguros ou supressões de erro.
+- Siga estritamente a separação de responsabilidades (DDD):
+  - `src/app/`: Camada de entrada do Next.js (páginas, layouts e Route Handlers em `src/app/api/`).
+  - `src/features/`: Código de negócio organizado por domínio (`auth`, `cadastros`, `produtos`, `producao`, `vendas`).
+    - `components/`: Interface visual (HTML/React puro com Tailwind). Componentes NUNCA conversam diretamente com o Supabase.
+    - `services/`: Camada exclusiva para requisições e integração com o Supabase.
+    - `facades/`: Adaptação e formatação de dados para apresentação.
 
-## Estilização e identidade visual
+## Estilização e Identidade Visual (Tailwind CSS v4)
+- Use exclusivamente **Tailwind CSS (v4)** para estilização. Não introduza CSS inline ou arquivos de estilos paralelos desnecessários.
+- Utilize rigorosamente a paleta de cores institucional Hetu:
+  - **Verde principal:** `#1F3D2B`
+  - **Creme natural:** `#F7F5F2`
+  - **Texto escuro:** `#2A2A2A`
+  - **Dourado (destaques):** `#C2A46D`
+- Formatação numérica: Valores monetários com precisão de 2 casas decimais (`NUMERIC(10,2)`). Quantidades de insumos em fichas técnicas com 4 casas decimais (`NUMERIC(10,4)`).
 
-- Use exclusivamente Tailwind CSS para estilização. Não introduza CSS inline,
-  estilos em linha, CSS Modules ou novas folhas de estilo para estilizar
-  componentes.
-- Use a paleta institucional Hetu:
-  - Verde principal: `#1F3D2B`
-  - Creme natural: `#F7F5F2`
-  - Texto escuro: `#2A2A2A`
-  - Dourado: `#C2A46D`
-- Prefira os tokens de tema compartilhados em vez de repetir valores de cor nas
-  classes. Se os tokens existentes não corresponderem à paleta, alinhe-os
-  apenas quando isso fizer parte do escopo da alteração; não invente cores
-  substitutas.
-- Garanta contraste legível e estados visuais claros para foco, interação,
-  desabilitação e mensagens.
-
-## Arquitetura por funcionalidades
-
-- Organize código de negócio por domínio em `src/features/<dominio>/`, seguindo
-  as funcionalidades existentes, como `auth`, `cadastros`, `produtos`,
-  `producao` e `vendas`.
-- Preserve a separação de responsabilidades:
-  - `components/`: interface e interação visual;
-  - `services/`: requisições e integração com a API;
-  - `facades/`: adaptação e formatação dos dados para apresentação.
-- Mantenha subdomínios independentes dentro de sua feature, seguindo o padrão
-  já usado em `cadastros`. Coloque código compartilhado em `src/lib/` somente
-  quando ele for realmente transversal.
-- Não concentre acesso a dados, regras de apresentação e interface no mesmo
-  componente.
-
-## PWA e responsividade
-
-- Desenvolva telas com abordagem mobile-first e valide os layouts em telas
-  pequenas antes de ampliá-los para desktop.
-- Considere viewport, navegação por toque, legibilidade, estados de carregamento
-  e áreas interativas adequadas ao uso no celular.
-- Preserve os metadados, o manifesto e os ícones da PWA. Não declare suporte
-  offline como existente sem implementar e validar service worker e estratégia
-  de cache apropriados.
-
-## Supabase, API e segurança
-
-- Use o cliente Supabase compartilhado de `src/lib/supabase.ts`; não crie
-  clientes paralelos sem necessidade justificada.
-- Para operações de negócio, faça as requisições pelos services da feature e
-  use Route Handlers do Next.js em `src/app/api/` como fronteira de servidor,
-  seguindo os domínios existentes.
-- Valide entradas e aplique autorização no servidor. Trate erros e respostas
-  explicitamente; não esconda falhas nem retorne sucesso como fallback.
-- Nunca exponha segredos, chaves privilegiadas ou credenciais em código cliente,
-  respostas da API ou variáveis `NEXT_PUBLIC_*`. Respeite as políticas de acesso
-  do Supabase e Row Level Security (RLS).
-- Não presuma que tabelas ou endpoints estejam implementados: confira o estado
-  atual do código e das migrações antes de depender deles.
-
-## Verificação
-
-- Execute as verificações relevantes para a alteração, usando os scripts
-  existentes do projeto, como `npm run lint` e `npm run build`, quando
-  apropriado.
-- Atualize a documentação diretamente relacionada quando contratos ou padrões
-  arquiteturais forem alterados.
+## Supabase e Segurança
+- Use o cliente Supabase compartilhado de `src/lib/supabase.ts`.
+- Para operações protegidas, utilize Route Handlers do Next.js em `src/app/api/` como fronteira de servidor.
+- Nunca exponha chaves administrativas (`service_role`) no código cliente. Respeite as políticas de RLS do Supabase.

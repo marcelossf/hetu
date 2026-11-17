@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      :root {
+        --hetu-primary: #4A154B;
+        --hetu-primary-hover: #370F38;
+        --hetu-secondary: #611F69;
+        --hetu-accent: #007A5A;
+        --hetu-accent-hover: #005A42;
+        --hetu-bg: #F8F9FA;
+        --hetu-surface: #FFFFFF;
+        --hetu-border: #E0E0E0;
+        --hetu-text: #1D1C1D;
+        --hetu-text-muted: #616061;
+        --hetu-danger: #E01E5A;
+      }
+
+      /* Estrutura Fixa da Janela */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--hetu-bg);
+        color: var(--hetu-text);
+      }
+
+      .main-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        box-sizing: border-box;
+        padding: 10px;
+      }
+
+      /* Cabeçalho Fixo (Topo) */
+      .header-brand {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--hetu-primary);
+        color: #FFF;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+      .header-brand .logo-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: bold;
+        font-size: 15px;
+      }
+      .header-brand .logo-badge {
+        background: #FFF;
+        color: var(--hetu-primary);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      /* Área de Formulário com Rolagem */
+      .scrollable-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+        margin-bottom: 8px;
+      }
+
+      /* Painel Fixo (Rodapé) */
+      .fixed-bottom {
+        flex-shrink: 0;
+        background: var(--hetu-surface);
+        border-top: 2px solid var(--hetu-border);
+        padding: 10px;
+        border-radius: 6px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      }
+
+      .row { display: flex; gap: 10px; margin-bottom: 8px; }
+      .col { flex: 1; }
+      
+      label { 
+        display: block; 
+        font-size: 11px; 
+        font-weight: 600; 
+        margin-bottom: 3px; 
+        color: var(--hetu-text);
+      }
+      
+      input, select { 
+        width: 100%; 
+        padding: 6px; 
+        box-sizing: border-box; 
+        border: 1px solid var(--hetu-border); 
+        border-radius: 4px; 
+        font-size: 12px; 
+        background-color: #FFF;
+        color: var(--hetu-text);
+        outline: none;
+      }
+      input:focus, select:focus {
+        border-color: var(--hetu-primary);
+        box-shadow: 0 0 0 1px var(--hetu-primary);
+      }
+      input[readonly] { 
+        background-color: #F0F0F0; 
+        color: var(--hetu-text-muted); 
+        font-weight: bold; 
+        cursor: not-allowed; 
+      }
+
+      .fieldset { 
+        border: 1px solid var(--hetu-border); 
+        padding: 10px; 
+        border-radius: 6px; 
+        margin-bottom: 8px; 
+        background: var(--hetu-surface); 
+      }
+      .fieldset legend { 
+        font-size: 11px; 
+        font-weight: 700; 
+        color: var(--hetu-primary); 
+        padding: 0 5px; 
+      }
+
+      table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+      th, td { border: 1px solid var(--hetu-border); padding: 5px; text-align: left; font-size: 11px; }
+      th { background-color: #F4F4F4; color: var(--hetu-text-muted); font-weight: 700; }
+      .btn-del-row { color: var(--hetu-danger); cursor: pointer; font-weight: bold; text-align: center; }
+
+      .actions { margin-top: 8px; text-align: right; }
+      .btn { padding: 7px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+      .btn-save { background-color: var(--hetu-accent); color: white; }
+      .btn-save:hover { background-color: var(--hetu-accent-hover); }
+      .btn-danger { background-color: var(--hetu-danger); color: white; }
+      .btn-cancel { background-color: #E8E8E8; color: var(--hetu-text); margin-right: 5px; }
+      .btn-new { background-color: var(--hetu-primary); color: white; margin-right: 5px; }
+      .btn-add { background-color: var(--hetu-secondary); color: white; padding: 4px 8px; font-size: 11px; margin-top: 5px; }
+
+      .destaque-custo { background-color: #F4EBF4; border-color: #D8C2D8; margin-bottom: 0; }
+    </style>
+  </head>
+  <body>
+
+    <div class="main-container">
+      <!-- 1. TOPO FIXO -->
+      <div class="header-brand">
+        <div class="logo-title">
+          <span class="logo-badge">HETU</span>
+          <span>Gestão de Fichas Técnicas</span>
+        </div>
+      </div>
+
+      <!-- 2. CORPO DO FORMULÁRIO (COM ROLAGEM OVERFLOW) -->
+      <div class="scrollable-content">
+        <form id="formFicha">
+          <input type="hidden" id="fichaId" value="">
+
+          <!-- Modo de Edição -->
+          <div class="fieldset">
+            <legend>Seleção / Cadastro</legend>
+            <div class="row">
+              <div class="col" style="flex: 3;">
+                <select id="selectFichaExistente" onchange="carregarFichaSelecionada()">
+                  <option value="">➕ Nova Ficha / Criar Receita do Zero</option>
+                </select>
+              </div>
+              <div class="col">
+                <button type="button" class="btn btn-new" style="width: 100%;" onclick="limparFormulario()">Nova Receita</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Dados Gerais -->
+          <div class="fieldset">
+            <legend>Dados Gerais da Receita</legend>
+            <div class="row">
+              <div class="col" style="flex: 2;">
+                <label for="nomeReceita">Nome da Receita / Produto:*</label>
+                <input type="text" id="nomeReceita" placeholder="Ex: Bolo de Cenoura" required>
+              </div>
+              <div class="col">
+                <label for="rendimento">Rendimento (Un):*</label>
+                <input type="number" id="rendimento" value="1" min="1" step="any" oninput="calcularTotais()" required>
+              </div>
+              <div class="col">
+                <label for="idCategoria">Categoria:</label>
+                <select id="idCategoria"></select>
+              </div>
+            </div>
+
+            <div class="row">
+              <div class="col">
+                <label for="precoVenda">Preço de Venda (R$):</label>
+                <input type="number" id="precoVenda" step="0.01" value="0.00">
+              </div>
+              <div class="col">
+                <label for="estoqueAtual">Estoque Atual:</label>
+                <input type="number" id="estoqueAtual" value="0">
+              </div>
+              <div class="col">
+                <label for="ativo">Ativo:</label>
+                <select id="ativo">
+                  <option value="Sim">Sim</option>
+                  <option value="Não">Não</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Custos Operacionais -->
+          <div class="fieldset">
+            <legend>Custos Operacionais Totais da Batida (R$)</legend>
+            <div class="row">
+              <div class="col">
+                <label for="custoEmbalagem">Embalagem Total:</label>
+                <input type="number" id="custoEmbalagem" step="0.01" value="0.00" oninput="calcularTotais()">
+              </div>
+              <div class="col">
+                <label for="custoMaoObra">Mão de Obra Total:</label>
+                <input type="number" id="custoMaoObra" step="0.01" value="0.00" oninput="calcularTotais()">
+              </div>
+              <div class="col">
+                <label for="custoArmazenamento">Armazenamento Total:</label>
+                <input type="number" id="custoArmazenamento" step="0.01" value="0.00" oninput="calcularTotais()">
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabela de Ingredientes -->
+          <div class="fieldset">
+            <legend>Ingredientes da Receita</legend>
+            <table id="tblItens">
+              <thead>
+                <tr>
+                  <th style="width: 35%;">Insumo</th>
+                  <th style="width: 15%;">Valor Unit. (R$)</th>
+                  <th style="width: 20%;">Qtd Utilizada</th>
+                  <th style="width: 10%;">Unidade</th>
+                  <th style="width: 15%;">Custo Total (R$)</th>
+                  <th style="width: 5%;">X</th>
+                </tr>
+              </thead>
+              <tbody id="bodyItens"></tbody>
+            </table>
+            <button type="button" class="btn btn-add" onclick="adicionarLinhaItem()">+ Adicionar Insumo</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 3. RODAPÉ FIXO (RESUMO DE CUSTOS + BOTÕES) -->
+      <div class="fixed-bottom">
+        <div class="fieldset destaque-custo">
+          <legend>Resumo de Custos (Cálculo Automático)</legend>
+          <div class="row">
+            <div class="col">
+              <label for="custoTotalCalculado">Custo Total da Receita (R$):</label>
+              <input type="text" id="custoTotalCalculado" value="0.00" readonly>
+            </div>
+            <div class="col">
+              <label for="custoUnitarioCalculado">Custo Unitário da Receita (R$):</label>
+              <input type="text" id="custoUnitarioCalculado" value="0.00" readonly>
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="btnExcluir" class="btn btn-danger" style="display:none; float: left;" onclick="excluirFicha()">Excluir</button>
+          <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Fechar</button>
+          <button type="button" id="btnSalvarFicha" class="btn btn-save" onclick="submeterFormulario()">Salvar Ficha Técnica</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let cacheInsumos = [];
+
+      window.onload = function() {
+        carregarListasIniciais();
+      };
+
+      function carregarListasIniciais() {
+        google.script.run
+          .withSuccessHandler(function(res) {
+            cacheInsumos = res.insumos || [];
+            
+            let selCat = document.getElementById('idCategoria');
+            selCat.innerHTML = '<option value="">-- Selecione --</option>';
+            if (res.categorias) {
+              res.categorias.forEach(c => {
+                selCat.innerHTML += `<option value="${c.id}">${c.nome}</option>`;
+              });
+            }
+
+            atualizarSelectFichas(res.fichas || []);
+            if(document.querySelectorAll('#bodyItens tr').length === 0) {
+              adicionarLinhaItem();
+            }
+          })
+          .obterDadosIniciaisFicha();
+      }
+
+      function atualizarSelectFichas(fichas) {
+        let selFicha = document.getElementById('selectFichaExistente');
+        selFicha.innerHTML = '<option value="">➕ Nova Ficha / Criar Receita do Zero</option>';
+        fichas.forEach(f => {
+          selFicha.innerHTML += `<option value="${f.id}">${f.nome}</option>`;
+        });
+      }
+
+      function adicionarLinhaItem(idInsumo = "", qtd = "") {
+        let tbody = document.getElementById('bodyItens');
+        let tr = document.createElement('tr');
+
+        let options = '<option value="">-- Selecione --</option>';
+        cacheInsumos.forEach(i => {
+          let sel = String(i.id) === String(idInsumo) ? 'selected' : '';
+          options += `<option value="${i.id}" ${sel}>${i.nome}</option>`;
+        });
+
+        tr.innerHTML = `
+          <td><select class="item-insumo" onchange="atualizarDadosInsumo(this)">${options}</select></td>
+          <td><input type="text" class="item-val-unit" value="0.00" readonly></td>
+          <td><input type="number" step="any" class="item-qtd" value="${qtd}" placeholder="Qtd" oninput="calcularLinhaCusto(this)"></td>
+          <td><input type="text" class="item-unidade" value="-" readonly></td>
+          <td><input type="text" class="item-custo-total" value="0.00" readonly></td>
+          <td class="btn-del-row" onclick="removerLinha(this)">×</td>
+        `;
+        tbody.appendChild(tr);
+
+        if (idInsumo) {
+          let selectElem = tr.querySelector('.item-insumo');
+          atualizarDadosInsumo(selectElem, false);
+          let qtdElem = tr.querySelector('.item-qtd');
+          qtdElem.value = qtd;
+          calcularLinhaCusto(qtdElem, false);
+        }
+      }
+
+      function removerLinha(elem) {
+        elem.parentElement.remove();
+        calcularTotais();
+      }
+
+      function atualizarDadosInsumo(selectElem, recalcular = true) {
+        let tr = selectElem.parentElement.parentElement;
+        let idInsumo = selectElem.value;
+        let objIns = cacheInsumos.find(i => String(i.id) === String(idInsumo));
+
+        if (objIns) {
+          tr.querySelector('.item-val-unit').value = Number(objIns.precoUnitario || 0).toFixed(2);
+          tr.querySelector('.item-unidade').value = objIns.unidade || "un";
+        } else {
+          tr.querySelector('.item-val-unit').value = "0.00";
+          tr.querySelector('.item-unidade').value = "-";
+        }
+
+        let inputQtd = tr.querySelector('.item-qtd');
+        calcularLinhaCusto(inputQtd, recalcular);
+      }
+
+      function calcularLinhaCusto(inputQtd, recalcular = true) {
+        let tr = inputQtd.parentElement.parentElement;
+        let valUnit = parseFloat(tr.querySelector('.item-val-unit').value) || 0;
+        let qtd = parseFloat(inputQtd.value) || 0;
+
+        let totalLinha = valUnit * qtd;
+        tr.querySelector('.item-custo-total').value = totalLinha.toFixed(2);
+
+        if (recalcular) calcularTotais();
+      }
+
+      function calcularTotais() {
+        let somaIngredientes = 0;
+        document.querySelectorAll('#bodyItens tr').forEach(tr => {
+          let custoLinha = parseFloat(tr.querySelector('.item-custo-total').value) || 0;
+          somaIngredientes += custoLinha;
+        });
+
+        let emb = parseFloat(document.getElementById('custoEmbalagem').value) || 0;
+        let maoObra = parseFloat(document.getElementById('custoMaoObra').value) || 0;
+        let armaz = parseFloat(document.getElementById('custoArmazenamento').value) || 0;
+
+        let custoTotalReceita = somaIngredientes + emb + maoObra + armaz;
+        let rendimento = parseFloat(document.getElementById('rendimento').value) || 1;
+        if (rendimento <= 0) rendimento = 1;
+
+        let custoUnitario = custoTotalReceita / rendimento;
+
+        document.getElementById('custoTotalCalculado').value = custoTotalReceita.toFixed(2);
+        document.getElementById('custoUnitarioCalculado').value = custoUnitario.toFixed(2);
+      }
+
+      function carregarFichaSelecionada() {
+        let id = document.getElementById('selectFichaExistente').value;
+        if (!id) {
+          limparFormulario();
+          return;
+        }
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            if (!res.sucesso) { alert(res.mensagem); return; }
+            let f = res.ficha;
+
+            document.getElementById('fichaId').value = f.id;
+            document.getElementById('nomeReceita').value = f.nomeReceita;
+            document.getElementById('rendimento').value = f.rendimento;
+            document.getElementById('idCategoria').value = f.idCategoria;
+            document.getElementById('precoVenda').value = f.precoVenda;
+            document.getElementById('estoqueAtual').value = f.estoqueAtual;
+            document.getElementById('ativo').value = f.ativo;
+
+            let rend = Number(f.rendimento) || 1;
+            document.getElementById('custoEmbalagem').value = (Number(f.embUnit || 0) * rend).toFixed(2);
+            document.getElementById('custoMaoObra').value = (Number(f.maoObraUnit || 0) * rend).toFixed(2);
+            document.getElementById('custoArmazenamento').value = (Number(f.armazUnit || 0) * rend).toFixed(2);
+
+            document.getElementById('bodyItens').innerHTML = '';
+            
+            if (f.itens && f.itens.length > 0) {
+              f.itens.forEach(item => {
+                adicionarLinhaItem(item.idInsumo, (Number(item.qtdUnitaria || 0) * rend));
+              });
+            } else {
+              adicionarLinhaItem();
+            }
+
+            calcularTotais();
+            document.getElementById('btnExcluir').style.display = 'inline-block';
+          })
+          .obterFichaPorIdHTML(id);
+      }
+
+      function limparFormulario() {
+        document.getElementById('formFicha').reset();
+        document.getElementById('fichaId').value = '';
+        document.getElementById('selectFichaExistente').value = '';
+        document.getElementById('bodyItens').innerHTML = '';
+        document.getElementById('btnExcluir').style.display = 'none';
+        adicionarLinhaItem();
+        calcularTotais();
+      }
+
+      function excluirFicha() {
+        let id = document.getElementById('fichaId').value;
+        if (!id) return;
+
+        if (confirm("Deseja realmente excluir esta ficha técnica?")) {
+          google.script.run
+            .withSuccessHandler(function(res) {
+              alert(res.mensagem);
+              if (res.sucesso) {
+                limparFormulario();
+                carregarListasIniciais();
+              }
+            })
+            .excluirFichaTecnicaHTML(id);
+        }
+      }
+
+      function submeterFormulario() {
+        const btnSalvar = document.getElementById('btnSalvarFicha');
+        let form = document.getElementById('formFicha');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        // 2. Trava o botão e altera o texto para "Carregando..."
+        if (btnSalvar) {
+          btnSalvar.disabled = true;
+          btnSalvar.innerText = 'Salvando ficha...';
+        }
+
+        let itens = [];
+        document.querySelectorAll('#bodyItens tr').forEach(tr => {
+          let idIns = tr.querySelector('.item-insumo').value;
+          let qtd = tr.querySelector('.item-qtd').value;
+          if (idIns && qtd) {
+            itens.push({ idInsumo: idIns, qtd: qtd });
+          }
+        });
+
+        let payload = {
+          id: document.getElementById('fichaId').value,
+          nomeReceita: document.getElementById('nomeReceita').value,
+          rendimento: document.getElementById('rendimento').value,
+          idCategoria: document.getElementById('idCategoria').value,
+          precoVenda: document.getElementById('precoVenda').value,
+          estoqueAtual: document.getElementById('estoqueAtual').value,
+          ativo: document.getElementById('ativo').value,
+          custoEmbalagem: document.getElementById('custoEmbalagem').value,
+          custoMaoObra: document.getElementById('custoMaoObra').value,
+          custoArmazenamento: document.getElementById('custoArmazenamento').value,
+          custoTotalCalculado: document.getElementById('custoTotalCalculado').value,
+          custoUnitarioCalculado: document.getElementById('custoUnitarioCalculado').value,
+          itens: itens
+        };
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            alert(res.mensagem);
+            if (res.sucesso) {
+              limparFormulario();
+              carregarListasIniciais();
+            }
+            if (btnSalvar) {
+              btnSalvar.disabled = false;
+              btnSalvar.innerText = 'Salvar Ficha Técnica';
+            }
+          })
+          .salvarFichaTecnicaHTML(payload);
+      }
+    </script>
+  </body>
+</html>

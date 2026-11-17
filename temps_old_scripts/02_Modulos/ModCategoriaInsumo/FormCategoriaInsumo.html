@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      :root {
+        --hetu-primary: #4A154B;
+        --hetu-primary-hover: #370F38;
+        --hetu-secondary: #611F69;
+        --hetu-accent: #007A5A;
+        --hetu-accent-hover: #005A42;
+        --hetu-bg: #F8F9FA;
+        --hetu-surface: #FFFFFF;
+        --hetu-border: #E0E0E0;
+        --hetu-text: #1D1C1D;
+        --hetu-text-muted: #616061;
+        --hetu-danger: #E01E5A;
+      }
+
+      /* Layout Fixo da Janela */
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        background-color: var(--hetu-bg);
+        color: var(--hetu-text);
+      }
+
+      .main-container {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        box-sizing: border-box;
+        padding: 10px;
+      }
+
+      /* Topo Fixo */
+      .header-brand {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: var(--hetu-primary);
+        color: #FFF;
+        padding: 10px 15px;
+        border-radius: 6px;
+        margin-bottom: 8px;
+      }
+      .header-brand .logo-title {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: bold;
+        font-size: 15px;
+      }
+      .header-brand .logo-badge {
+        background: #FFF;
+        color: var(--hetu-primary);
+        padding: 2px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      /* Abas de Navegação */
+      .tabs {
+        display: flex;
+        gap: 4px;
+        border-bottom: 2px solid var(--hetu-border);
+        margin-bottom: 10px;
+        flex-shrink: 0;
+      }
+      .tab-btn {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        background: #E8E8E8;
+        cursor: pointer;
+        font-weight: bold;
+        font-size: 12px;
+        color: var(--hetu-text-muted);
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+        transition: all 0.2s;
+      }
+      .tab-btn.active {
+        background: var(--hetu-secondary);
+        color: white;
+      }
+
+      /* Corpo com Rolagem Overflow */
+      .scrollable-content {
+        flex: 1;
+        overflow-y: auto;
+        padding-right: 5px;
+        margin-bottom: 8px;
+      }
+
+      .tab-content { display: none; }
+      .tab-content.active { display: block; }
+
+      .form-group { margin-bottom: 10px; }
+      
+      label { 
+        display: block; 
+        font-size: 11px; 
+        font-weight: 600; 
+        margin-bottom: 3px; 
+        color: var(--hetu-text);
+      }
+      
+      input, select { 
+        width: 100%; 
+        padding: 6px; 
+        box-sizing: border-box; 
+        border: 1px solid var(--hetu-border); 
+        border-radius: 4px; 
+        font-size: 12px; 
+        background-color: #FFF;
+        color: var(--hetu-text);
+        outline: none;
+      }
+      input:focus, select:focus {
+        border-color: var(--hetu-primary);
+        box-shadow: 0 0 0 1px var(--hetu-primary);
+      }
+
+      .fieldset { 
+        border: 1px solid var(--hetu-border); 
+        padding: 10px; 
+        border-radius: 6px; 
+        margin-bottom: 8px; 
+        background: var(--hetu-surface); 
+      }
+      .fieldset legend { 
+        font-size: 11px; 
+        font-weight: 700; 
+        color: var(--hetu-primary); 
+        padding: 0 5px; 
+      }
+
+      /* Rodapé Fixo com Botões */
+      .fixed-bottom {
+        flex-shrink: 0;
+        background: var(--hetu-surface);
+        border-top: 2px solid var(--hetu-border);
+        padding: 10px;
+        border-radius: 6px;
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+      }
+
+      .actions { text-align: right; }
+      .btn { padding: 7px 12px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 12px; }
+      .btn-save { background-color: var(--hetu-accent); color: white; }
+      .btn-save:hover { background-color: var(--hetu-accent-hover); }
+      .btn-cancel { background-color: #E8E8E8; color: var(--hetu-text); margin-right: 5px; }
+      .btn-cancel:hover { background-color: #D8D8D8; }
+    </style>
+  </head>
+  <body>
+
+    <div class="main-container">
+      <!-- 1. TOPO FIXO (HETU BRAND) -->
+      <div class="header-brand">
+        <div class="logo-title">
+          <span class="logo-badge">HETU</span>
+          <span>Categorias de Insumo</span>
+        </div>
+      </div>
+
+      <!-- ABAS -->
+      <div class="tabs">
+        <button type="button" class="tab-btn active" onclick="alternarAba('novo')">Nova Categoria</button>
+        <button type="button" class="tab-btn" onclick="alternarAba('editar')">Editar / Consultar</button>
+      </div>
+
+      <!-- 2. CORPO ROLÁVEL -->
+      <div class="scrollable-content">
+        
+        <!-- ABA 1: CADASTRAR -->
+        <div id="tabNovo" class="tab-content active">
+          <form id="formNovo">
+            <div class="fieldset">
+              <legend>Cadastrar Nova Categoria</legend>
+              <div class="form-group">
+                <label for="novoNome">Nome da Categoria:*</label>
+                <input type="text" id="novoNome" placeholder="Ex: Laticínios, Secos, Embalagens..." required>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- ABA 2: EDITAR / ATUALIZAR -->
+        <div id="tabEditar" class="tab-content">
+          <form id="formEditar">
+            <div class="fieldset">
+              <legend>Alterar Categoria Existente</legend>
+              <div class="form-group">
+                <label for="selectCategoria">Selecione a Categoria:*</label>
+                <select id="selectCategoria" onchange="carregarDadosEdicao()" required>
+                  <option value="">Carregando categorias...</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="editNome">Novo Nome:*</label>
+                <input type="text" id="editNome" placeholder="Informe o novo nome" required>
+              </div>
+            </div>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- 3. RODAPÉ FIXO -->
+      <div class="fixed-bottom">
+        <div class="actions">
+          <button type="button" class="btn btn-cancel" onclick="google.script.host.close()">Fechar</button>
+          <button type="button" id="btnAcaoSalvar" class="btn btn-save" onclick="executarAcaoSalvar()">Cadastrar</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let listaCategoriasGlobal = [];
+      let abaAtual = 'novo';
+
+      window.onload = function() {
+        carregarListaCategorias();
+      };
+
+      function alternarAba(aba) {
+        abaAtual = aba;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        let btnSalvar = document.getElementById('btnAcaoSalvar');
+
+        if (aba === 'novo') {
+          document.querySelectorAll('.tab-btn')[0].classList.add('active');
+          document.getElementById('tabNovo').classList.add('active');
+          btnSalvar.innerText = "Cadastrar";
+        } else {
+          document.querySelectorAll('.tab-btn')[1].classList.add('active');
+          document.getElementById('tabEditar').classList.add('active');
+          btnSalvar.innerText = "Atualizar";
+        }
+      }
+
+      function carregarListaCategorias() {
+        google.script.run
+          .withSuccessHandler(function(lista) {
+            listaCategoriasGlobal = lista || [];
+            let select = document.getElementById('selectCategoria');
+            select.innerHTML = '<option value="">Selecione para alterar...</option>';
+            
+            listaCategoriasGlobal.forEach(c => {
+              select.innerHTML += `<option value="${c.nome}">${c.nome}</option>`;
+            });
+          })
+          .obterTodasCategoriasInsumo();
+      }
+
+      function carregarDadosEdicao() {
+        let nomeSel = document.getElementById('selectCategoria').value;
+        document.getElementById('editNome').value = nomeSel;
+      }
+
+      function executarAcaoSalvar() {
+        if (abaAtual === 'novo') {
+          salvarNovo();
+        } else {
+          salvarEdicao();
+        }
+      }
+
+      function salvarNovo() {
+        let form = document.getElementById('formNovo');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        let payload = {
+          nome: document.getElementById('novoNome').value.trim()
+        };
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            alert(res.mensagem);
+            if (res.sucesso) {
+              document.getElementById('formNovo').reset();
+              carregarListaCategorias();
+            }
+          })
+          .salvarCategoriaInsumoHTML(payload);
+      }
+
+      function salvarEdicao() {
+        let form = document.getElementById('formEditar');
+        if (!form.checkValidity()) {
+          form.reportValidity();
+          return;
+        }
+
+        let payload = {
+          nomeAntigo: document.getElementById('selectCategoria').value,
+          nomeNovo: document.getElementById('editNome').value.trim()
+        };
+
+        google.script.run
+          .withSuccessHandler(function(res) {
+            alert(res.mensagem);
+            if (res.sucesso) {
+              document.getElementById('formEditar').reset();
+              carregarListaCategorias();
+            }
+          })
+          .atualizarCategoriaInsumoHTML(payload);
+      }
+    </script>
+  </body>
+</html>
