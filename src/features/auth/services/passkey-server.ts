@@ -161,10 +161,17 @@ async function getAuthContext(request: NextRequest): Promise<AuthContext> {
 
   const claims = data.claims;
   const appMetadata = claims.app_metadata;
-  const provider =
+  const providers =
+    isRecord(appMetadata) && Array.isArray(appMetadata.providers)
+      ? appMetadata.providers.filter(
+          (value): value is string => typeof value === "string",
+        )
+      : [];
+  const metadataProvider =
     isRecord(appMetadata) && typeof appMetadata.provider === "string"
       ? appMetadata.provider
       : "";
+  const provider = providers.includes("google") ? "google" : metadataProvider;
 
   return {
     userId: claims.sub,
@@ -422,12 +429,18 @@ function requirePageNonce(value: unknown): string {
   return value;
 }
 
-function requireRecentGoogleLogin(context: AuthContext): void {
+function hasRecentGoogleLogin(context: AuthContext): boolean {
   const loginAge =
     context.authTime === null ? Number.POSITIVE_INFINITY : Date.now() / 1000 - context.authTime;
-  const isRecent = loginAge >= 0 && loginAge <= recentGoogleLoginSeconds;
+  return (
+    context.provider === "google" &&
+    loginAge >= 0 &&
+    loginAge <= recentGoogleLoginSeconds
+  );
+}
 
-  if (context.provider !== "google" || !isRecent) {
+function requireRecentGoogleLogin(context: AuthContext): void {
+  if (!hasRecentGoogleLogin(context)) {
     throw new PasskeyRequestError(
       "Para cadastrar uma passkey, entre novamente com sua conta Google.",
       403,
@@ -475,11 +488,7 @@ function assertSameOrigin(request: NextRequest, relyingParty: RelyingParty): voi
 export async function getPasskeyStatus(request: NextRequest): Promise<Response> {
   const context = await getAuthContext(request);
   const credentials = await getCredentials(context);
-  const canRegisterPasskey =
-    context.provider === "google" &&
-    context.authTime !== null &&
-    Date.now() / 1000 - context.authTime >= 0 &&
-    Date.now() / 1000 - context.authTime <= recentGoogleLoginSeconds;
+  const canRegisterPasskey = hasRecentGoogleLogin(context);
 
   return Response.json({
     hasPasskey: credentials.length > 0,
@@ -508,6 +517,7 @@ export async function createRegistrationOptions(
       id: credential.credential_id,
     })),
     authenticatorSelection: {
+      authenticatorAttachment: "platform",
       residentKey: "preferred",
       userVerification: "required",
     },

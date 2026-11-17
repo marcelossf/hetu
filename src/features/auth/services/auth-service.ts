@@ -127,16 +127,28 @@ export async function signInWithGoogle(): Promise<void> {
 }
 
 export async function signOutFromHetu(): Promise<void> {
-  const cleanupResponse = await fetch("/api/auth/passkeys/logout", {
-    method: "POST",
-    credentials: "same-origin",
-    cache: "no-store",
-  });
+  let cleanupError: string | null = null;
+  try {
+    const cleanupResponse = await fetch("/api/auth/passkeys/logout", {
+      method: "POST",
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    if (!cleanupResponse.ok) {
+      cleanupError = `HTTP ${cleanupResponse.status}`;
+    }
+  } catch (error) {
+    cleanupError = error instanceof Error ? error.message : "falha de rede";
+  }
+
   const { error } = await getSupabaseClient().auth.signOut();
   unlockedPageNonce = null;
   if (error) throw error;
-  if (!cleanupResponse.ok) {
-    throw new Error("A sessão do dispositivo não foi encerrada corretamente.");
+  if (cleanupError) {
+    console.warn(
+      "A sessão Supabase foi encerrada, mas não foi possível limpar os cookies de passkey:",
+      cleanupError,
+    );
   }
 }
 

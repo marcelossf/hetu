@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { Session } from "@supabase/supabase-js";
 import {
   authenticateWithPasskey,
@@ -55,8 +55,10 @@ export function LoginScreen() {
   );
   const [gate, setGate] = useState<GateState>("loading");
   const [canRegisterPasskey, setCanRegisterPasskey] = useState(false);
-  const [supportsWebAuthn] = useState(
-    () => typeof window !== "undefined" && supportsPasskeys(),
+  const supportsWebAuthn = useSyncExternalStore(
+    () => () => {},
+    supportsPasskeys,
+    () => false,
   );
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [error, setError] = useState("");
@@ -236,7 +238,7 @@ export function LoginScreen() {
     busyAction === "unlock";
   const loadingLabel =
     busyAction === "register"
-      ? "Preparando a passkey neste dispositivo..."
+      ? "Preparando a verificação biométrica..."
       : busyAction === "unlock"
         ? "Aguardando a verificação do dispositivo..."
         : "Verificando sua sessão...";
@@ -305,25 +307,25 @@ export function LoginScreen() {
                   Proteja seu acesso
                 </h1>
                 <p className="mt-2 text-sm leading-6 text-hetu-text/70">
-                  Cadastre uma passkey para confirmar sua identidade com o
-                  método seguro disponível neste dispositivo.
+                  Ative uma credencial segura neste dispositivo. Ele poderá
+                  solicitar biometria ou, conforme suas configurações, o PIN
+                  ou bloqueio de tela.
                 </p>
                 <button
                   type="button"
                   onClick={handleRegisterPasskey}
                   disabled={
                     !supportsWebAuthn ||
-                    !canRegisterPasskey ||
                     busyAction !== null
                   }
                   className="mt-7 min-h-14 w-full rounded-xl bg-hetu-green px-5 py-3.5 text-sm font-medium text-white transition hover:bg-hetu-green/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hetu-gold disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Cadastrar passkey neste dispositivo
+                  Ativar biometria neste dispositivo
                 </button>
                 {!canRegisterPasskey && (
                   <p className="mt-3 text-xs leading-5 text-hetu-text/65">
-                    Para configurar, confirme sua conta entrando novamente com
-                    Google.
+                    Para ativar, confirme novamente sua conta Google pelo botão
+                    abaixo.
                   </p>
                 )}
                 {!supportsWebAuthn && (
@@ -359,8 +361,12 @@ export function LoginScreen() {
                   disabled={!supportsWebAuthn || busyAction !== null}
                   className="mt-7 min-h-14 w-full rounded-xl bg-hetu-green px-5 py-3.5 text-sm font-medium text-white transition hover:bg-hetu-green/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hetu-gold disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Verificar com passkey
+                  Desbloquear com biometria
                 </button>
+                <p className="mt-3 text-xs leading-5 text-hetu-text/65">
+                  O dispositivo pode solicitar biometria ou, conforme suas
+                  configurações, o PIN/bloqueio de tela.
+                </p>
                 {!supportsWebAuthn && (
                   <p className="mt-3 text-xs leading-5 text-hetu-text/65">
                     Este navegador não oferece passkeys. Tente em um navegador
@@ -375,7 +381,7 @@ export function LoginScreen() {
                     disabled={busyAction !== null}
                     className="mt-4 text-sm font-medium text-hetu-green underline decoration-hetu-gold underline-offset-4 disabled:opacity-60"
                   >
-                    Cadastrar outra passkey neste dispositivo
+                    Ativar biometria neste dispositivo
                   </button>
                 )}
                 <button
