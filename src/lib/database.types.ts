@@ -1,6 +1,24 @@
 export type Database = {
   public: {
     Tables: {
+      user_security_settings: {
+        Row: {
+          user_id: string;
+          biometric_enabled: boolean;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          biometric_enabled?: boolean;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          biometric_enabled?: boolean;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       user_passkeys: {
         Row: {
           credential_id: string;

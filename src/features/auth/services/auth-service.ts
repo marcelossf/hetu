@@ -18,6 +18,7 @@ type AuthenticationOptions = PublicKeyCredentialRequestOptionsJSON;
 type PasskeyStatus = {
   hasPasskey: boolean;
   canRegisterPasskey: boolean;
+  biometricEnabled: boolean;
 };
 
 let unlockedPageNonce: string | null = null;
@@ -39,6 +40,9 @@ async function requestJson(
     method: body ? "POST" : "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
+      ...(typeof body?.pageNonce === "string"
+        ? { "X-Hetu-Page-Nonce": body.pageNonce }
+        : {}),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     credentials: "same-origin",
@@ -177,14 +181,27 @@ export async function getPasskeyStatus(
   if (
     !isRecord(result) ||
     typeof result.hasPasskey !== "boolean" ||
-    typeof result.canRegisterPasskey !== "boolean"
+    typeof result.canRegisterPasskey !== "boolean" ||
+    typeof result.biometricEnabled !== "boolean"
   ) {
     throw new Error("Não foi possível confirmar o estado da passkey.");
   }
   return {
     hasPasskey: result.hasPasskey,
     canRegisterPasskey: result.canRegisterPasskey,
+    biometricEnabled: result.biometricEnabled,
   };
+}
+
+export async function setBiometricPreference(
+  accessToken: string,
+  pageNonce: string,
+  biometricEnabled: boolean,
+): Promise<void> {
+  await requestJson("/api/auth/passkeys/settings", accessToken, {
+    pageNonce,
+    biometricEnabled,
+  });
 }
 
 export function supportsPasskeys(): boolean {

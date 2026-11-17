@@ -120,6 +120,11 @@ Este documento é a **Fonte Única da Verdade** sobre a estrutura relacional do 
 
 ## 4. Autenticação de dispositivos
 
+### `user_security_settings`
+- `user_id` (UUID, PK, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `biometric_enabled` (BOOLEAN, DEFAULT TRUE)
+- `updated_at` (TIMESTAMP WITH TIME ZONE)
+
 ### `user_passkeys`
 - `credential_id` (TEXT, PK)
 - `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
@@ -144,3 +149,5 @@ As tabelas têm RLS habilitado e não concedem acesso direto a `anon` ou
 serviço privada. Cada desafio WebAuthn é consumido uma única vez para impedir
 repetição de uma resposta. A migração correspondente está em
 `supabase/migrations/20261117150000_create_user_passkeys.sql`.
+A preferência biométrica por conta é criada por
+`supabase/migrations/20261117170000_add_biometric_preferences.sql`.

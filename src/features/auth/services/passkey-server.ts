@@ -492,6 +492,39 @@ async function getCredentials(
   return data;
 }
 
+async function getBiometricPreference(context: AuthContext): Promise<boolean> {
+  const { data, error } = await context.database
+    .from("user_security_settings")
+    .select("biometric_enabled")
+    .eq("user_id", context.userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Não foi possível consultar a preferência biométrica: ${error.message}`);
+  }
+  return data?.biometric_enabled ?? true;
+}
+
+async function saveBiometricPreference(
+  context: AuthContext,
+  biometricEnabled: boolean,
+): Promise<void> {
+  const { error } = await context.database
+    .from("user_security_settings")
+    .upsert(
+      {
+        user_id: context.userId,
+        biometric_enabled: biometricEnabled,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id" },
+    );
+
+  if (error) {
+    throw new Error(`Não foi possível salvar a preferência biométrica: ${error.message}`);
+  }
+}
+
 async function readJsonBody(
   request: NextRequest,
 ): Promise<Record<string, unknown>> {
@@ -517,13 +550,50 @@ function assertSameOrigin(request: NextRequest, relyingParty: RelyingParty): voi
 
 export async function getPasskeyStatus(request: NextRequest): Promise<Response> {
   const context = await getAuthContext(request);
-  const credentials = await getCredentials(context);
+  const [credentials, biometricEnabled] = await Promise.all([
+    getCredentials(context),
+    getBiometricPreference(context),
+  ]);
   const canRegisterPasskey = hasRecentGoogleLogin(context);
 
   return Response.json({
     hasPasskey: credentials.length > 0,
     canRegisterPasskey,
+    biometricEnabled,
   });
+}
+
+export async function updateBiometricPreference(
+  request: NextRequest,
+): Promise<Response> {
+  const context = await getAuthContext(request);
+  const relyingParty = getRelyingParty(request);
+  assertSameOrigin(request, relyingParty);
+  const body = await readJsonBody(request);
+  if (typeof body.biometricEnabled !== "boolean") {
+    throw new PasskeyRequestError("A preferência de biometria é inválida.", 400);
+  }
+
+  const credentials = await getCredentials(context);
+  if (body.biometricEnabled && credentials.length === 0) {
+    throw new PasskeyRequestError(
+      "Cadastre uma biometria neste dispositivo antes de ativar a exigência.",
+      409,
+    );
+  }
+
+  const currentPreference = await getBiometricPreference(context);
+  const googleReauthenticated = hasRecentGoogleLogin(context);
+  if (
+    body.biometricEnabled ||
+    (currentPreference && credentials.length > 0 && !googleReauthenticated)
+  ) {
+    const unlocked = await requireUnlockedUser(request);
+    if (!isAuthenticatedUser(unlocked)) return unlocked;
+  }
+
+  await saveBiometricPreference(context, body.biometricEnabled);
+  return Response.json({ biometricEnabled: body.biometricEnabled });
 }
 
 export async function createRegistrationOptions(
@@ -619,6 +689,8 @@ export async function verifyRegistration(
     }
     throw new Error(`Não foi possível salvar a passkey: ${error.message}`);
   }
+
+  await saveBiometricPreference(context, true);
 
   const response = Response.json({ verified: true });
   response.headers.append(
@@ -761,6 +833,14 @@ export async function requireUnlockedUser(
   request: NextRequest,
 ): Promise<{ userId: string } | Response> {
   const context = await getAuthContext(request);
+  const [biometricEnabled, credentials] = await Promise.all([
+    getBiometricPreference(context),
+    getCredentials(context),
+  ]);
+  if (!biometricEnabled || credentials.length === 0) {
+    return { userId: context.userId };
+  }
+
   const pageNonce = request.headers.get("x-hetu-page-nonce");
   const value = unseal(request.cookies.get(unlockedCookieName)?.value);
 

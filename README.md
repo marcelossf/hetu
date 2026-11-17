@@ -19,17 +19,21 @@ as URLs de redirecionamento para os ambientes local e de produção. O login da
 tela inicial usa `signInWithOAuth` do Supabase; as credenciais do Google ficam
 configuradas no provedor Google do Supabase, não no navegador.
 
-Após o login Google, é obrigatório registrar uma passkey neste dispositivo.
-Nos acessos seguintes, a tela solicita a verificação de usuário do sistema
-(biometria ou outro método oferecido pelo próprio dispositivo). O site não
-acessa nem armazena dados biométricos. A passkey é validada pelo servidor via
-WebAuthn e sua chave pública é armazenada em `user_passkeys`; as tabelas têm RLS
-habilitado e não concedem acesso direto ao cliente.
+Após o login Google, a tela sugere cadastrar uma passkey, mas é possível
+continuar sem biometria. Quando ativada e cadastrada, a verificação é solicitada
+ao entrar; a preferência vale para a conta inteira. O dispositivo pode usar
+biometria ou outro método de verificação do sistema, como PIN. O site não acessa
+nem armazena dados biométricos. As passkeys são validadas pelo servidor via
+WebAuthn e as tabelas não concedem acesso direto ao cliente.
 
 Para habilitar esse fluxo:
 
-1. Aplique a migração `supabase/migrations/20261117150000_create_user_passkeys.sql`
-   ao projeto Supabase.
+1. No terminal, na raiz do repositório, vincule o projeto com
+   `npx supabase link --project-ref SEU_PROJECT_REF` e aplique as migrações
+   pendentes com `npx supabase db push`. Isso inclui
+   `20261117150000_create_user_passkeys.sql` e
+   `20261117170000_add_biometric_preferences.sql`; não execute manualmente uma
+   migração que já esteja registrada como aplicada.
 2. Configure `NEXT_PUBLIC_APP_URL` com a origem exata do ambiente, por exemplo
    `http://localhost:3000` localmente e `https://app.example.com` em produção.
 3. Configure `WEBAUTHN_SESSION_SECRET` com um segredo aleatório de pelo menos
@@ -45,7 +49,8 @@ novamente com Google para cadastrar outra neste dispositivo. No iPhone/iPad,
 instale a PWA por **Compartilhar > Adicionar à Tela de Início**; no Android,
 use **Instalar app** ou **Adicionar à tela inicial** no menu do navegador.
 
-Handlers de API protegidos validam a sessão de passkey e o token Supabase. Os
+Handlers de API protegidos validam a sessão do usuário. Quando há passkey
+cadastrada e a biometria está ativada, também exigem a sessão desbloqueada. Os
 serviços de módulos devem enviar `Authorization: Bearer <access_token>` e o
 cabeçalho `X-Hetu-Page-Nonce`; use `getUnlockedApiHeaders()` em
 `src/features/auth/services/auth-service.ts` para construí-los. Não remova essa

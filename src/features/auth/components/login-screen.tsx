@@ -1,8 +1,15 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import type { Session } from "@supabase/supabase-js";
+import type { ReactNode } from "react";
 import {
   authenticateWithPasskey,
   getCurrentSession,
@@ -10,6 +17,7 @@ import {
   lockCurrentPage,
   markPageUnlocked,
   registerPasskey,
+  setBiometricPreference,
   signInWithGoogle,
   signOutFromHetu,
   subscribeToSession,
@@ -22,7 +30,7 @@ type BeforeInstallPromptEvent = Event & {
 };
 
 type GateState = "loading" | "signed-out" | "registration" | "locked" | "unlocked";
-type BusyAction = "google" | "register" | "unlock" | "sign-out" | null;
+type BusyAction = "google" | "register" | "unlock" | "settings" | "sign-out" | null;
 
 function getErrorMessage(error: unknown): string {
   return error instanceof Error
@@ -55,6 +63,9 @@ export function LoginScreen() {
   );
   const [gate, setGate] = useState<GateState>("loading");
   const [canRegisterPasskey, setCanRegisterPasskey] = useState(false);
+  const [hasPasskey, setHasPasskey] = useState(false);
+  const [biometricEnabled, setBiometricEnabled] = useState(true);
+  const autoUnlockAttempted = useRef<string | null>(null);
   const supportsWebAuthn = useSyncExternalStore(
     () => () => {},
     supportsPasskeys,
@@ -78,6 +89,8 @@ export function LoginScreen() {
           if (sessionRef.current?.user.id !== nextSession?.user.id) {
             setGate("loading");
             setCanRegisterPasskey(false);
+            setHasPasskey(false);
+            setBiometricEnabled(true);
             setError("");
             lockCurrentPage();
           }
@@ -116,7 +129,16 @@ export function LoginScreen() {
       .then((status) => {
         if (!active) return;
         setCanRegisterPasskey(status.canRegisterPasskey);
-        setGate(status.hasPasskey ? "locked" : "registration");
+        setHasPasskey(status.hasPasskey);
+        setBiometricEnabled(status.biometricEnabled);
+        if (status.biometricEnabled && status.hasPasskey) {
+          setGate("locked");
+        } else if (status.biometricEnabled && !status.hasPasskey) {
+          setGate("registration");
+        } else {
+          markPageUnlocked(pageNonce);
+          setGate("unlocked");
+        }
       })
       .catch((statusError: unknown) => {
         if (!active) return;
@@ -180,6 +202,8 @@ export function LoginScreen() {
     try {
       await registerPasskey(session.access_token, pageNonce);
       markPageUnlocked(pageNonce);
+      setHasPasskey(true);
+      setBiometricEnabled(true);
       setCanRegisterPasskey(false);
       setGate("unlocked");
     } catch (registrationError) {
@@ -189,7 +213,7 @@ export function LoginScreen() {
     }
   }
 
-  async function handleUnlock() {
+  const handleUnlock = useCallback(async (automatic = false) => {
     if (!session || !pageNonce) return;
 
     setBusyAction("unlock");
@@ -199,11 +223,26 @@ export function LoginScreen() {
       markPageUnlocked(pageNonce);
       setGate("unlocked");
     } catch (authenticationError) {
-      setError(getErrorMessage(authenticationError));
+      const isDismissed =
+        authenticationError instanceof Error &&
+        ["AbortError", "NotAllowedError"].includes(authenticationError.name);
+      if (!automatic || !isDismissed) {
+        setError(getErrorMessage(authenticationError));
+      }
     } finally {
       setBusyAction(null);
     }
-  }
+  }, [pageNonce, session]);
+
+  useEffect(() => {
+    if (gate !== "locked" || !session || !supportsWebAuthn) return;
+
+    const attemptKey = `${session.user.id}:${pageNonce}`;
+    if (autoUnlockAttempted.current === attemptKey) return;
+
+    autoUnlockAttempted.current = attemptKey;
+    void handleUnlock(true);
+  }, [gate, handleUnlock, pageNonce, session, supportsWebAuthn]);
 
   async function handleSignOut(reAuthenticate = false) {
     setBusyAction(reAuthenticate ? "google" : "sign-out");
@@ -213,6 +252,44 @@ export function LoginScreen() {
       if (reAuthenticate) await signInWithGoogle();
     } catch (signOutError) {
       setError(getErrorMessage(signOutError));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  function handleContinueWithoutBiometric() {
+    if (!pageNonce) return;
+    setError("");
+    markPageUnlocked(pageNonce);
+    setGate("unlocked");
+  }
+
+  async function handleBiometricPreferenceChange(enabled: boolean) {
+    if (!session || !pageNonce) return;
+
+    setBusyAction(enabled ? (hasPasskey ? "unlock" : "register") : "settings");
+    setError("");
+    try {
+      if (enabled && hasPasskey) {
+        await authenticateWithPasskey(session.access_token, pageNonce);
+      } else if (enabled) {
+        await registerPasskey(session.access_token, pageNonce);
+        setHasPasskey(true);
+        setCanRegisterPasskey(false);
+        markPageUnlocked(pageNonce);
+        setBiometricEnabled(true);
+        return;
+      }
+
+      if (enabled) markPageUnlocked(pageNonce);
+      await setBiometricPreference(session.access_token, pageNonce, enabled);
+      setBiometricEnabled(enabled);
+      if (!enabled) {
+        markPageUnlocked(pageNonce);
+        if (gate === "locked") setGate("unlocked");
+      }
+    } catch (preferenceError) {
+      setError(getErrorMessage(preferenceError));
     } finally {
       setBusyAction(null);
     }
@@ -242,6 +319,23 @@ export function LoginScreen() {
       : busyAction === "unlock"
         ? "Aguardando a verificação do dispositivo..."
         : "Verificando sua sessão...";
+
+  if (visibleGate === "unlocked" && session) {
+    return (
+      <AuthenticatedApp
+        email={session.user.email ?? ""}
+        biometricEnabled={biometricEnabled}
+        hasPasskey={hasPasskey}
+        supportsWebAuthn={supportsWebAuthn}
+        busy={busyAction !== null}
+        error={error}
+        isStandalone={isStandalone}
+        onBiometricPreferenceChange={handleBiometricPreferenceChange}
+        onSignOut={() => handleSignOut()}
+        onClearError={() => setError("")}
+      />
+    );
+  }
 
   return (
     <main className="relative flex min-h-dvh flex-1 items-center justify-center overflow-x-hidden bg-hetu-cream px-5 py-4 sm:px-8 sm:py-8">
@@ -322,6 +416,14 @@ export function LoginScreen() {
                 >
                   Ativar biometria neste dispositivo
                 </button>
+                <button
+                  type="button"
+                  onClick={handleContinueWithoutBiometric}
+                  disabled={busyAction !== null}
+                  className="mt-4 block w-full text-sm text-hetu-text/70 underline underline-offset-4 disabled:opacity-60"
+                >
+                  Continuar sem ativar agora
+                </button>
                 {!canRegisterPasskey && (
                   <p className="mt-3 text-xs leading-5 text-hetu-text/65">
                     Para ativar, confirme novamente sua conta Google pelo botão
@@ -357,7 +459,7 @@ export function LoginScreen() {
                 </p>
                 <button
                   type="button"
-                  onClick={handleUnlock}
+                  onClick={() => void handleUnlock()}
                   disabled={!supportsWebAuthn || busyAction !== null}
                   className="mt-7 min-h-14 w-full rounded-xl bg-hetu-green px-5 py-3.5 text-sm font-medium text-white transition hover:bg-hetu-green/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hetu-gold disabled:cursor-not-allowed disabled:opacity-60"
                 >
@@ -365,7 +467,8 @@ export function LoginScreen() {
                 </button>
                 <p className="mt-3 text-xs leading-5 text-hetu-text/65">
                   O dispositivo pode solicitar biometria ou, conforme suas
-                  configurações, o PIN/bloqueio de tela.
+                  configurações, o PIN/bloqueio de tela. Se o pedido automático
+                  não aparecer, toque no botão para tentar novamente.
                 </p>
                 {!supportsWebAuthn && (
                   <p className="mt-3 text-xs leading-5 text-hetu-text/65">
@@ -384,15 +487,25 @@ export function LoginScreen() {
                     Ativar biometria neste dispositivo
                   </button>
                 )}
+                {canRegisterPasskey && (
+                  <button
+                    type="button"
+                    onClick={() => void handleBiometricPreferenceChange(false)}
+                    disabled={busyAction !== null}
+                    className="mt-5 block w-full text-sm text-hetu-green underline underline-offset-4 disabled:opacity-60"
+                  >
+                    Continuar com Google e desativar biometria na conta
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => handleSignOut(true)}
                   disabled={busyAction !== null}
-                  className="mt-5 block w-full text-sm text-hetu-text/65 underline underline-offset-4 disabled:opacity-60"
+                  className="mt-4 block w-full text-sm text-hetu-text/65 underline underline-offset-4 disabled:opacity-60"
                 >
                   {busyAction === "google"
                     ? "Abrindo Google..."
-                    : "Não consigo usar a passkey — entrar com Google"}
+                    : "Entrar novamente com Google"}
                 </button>
               </>
             )}
@@ -452,6 +565,269 @@ export function LoginScreen() {
         )}
       </section>
     </main>
+  );
+}
+
+type AuthenticatedAppProps = {
+  email: string;
+  biometricEnabled: boolean;
+  hasPasskey: boolean;
+  supportsWebAuthn: boolean;
+  busy: boolean;
+  error: string;
+  isStandalone: boolean | null;
+  onBiometricPreferenceChange: (enabled: boolean) => void;
+  onSignOut: () => void;
+  onClearError: () => void;
+};
+
+function AuthenticatedApp({
+  email,
+  biometricEnabled,
+  hasPasskey,
+  supportsWebAuthn,
+  busy,
+  error,
+  isStandalone,
+  onBiometricPreferenceChange,
+  onSignOut,
+  onClearError,
+}: AuthenticatedAppProps) {
+  const [sidebarExpanded, setSidebarExpanded] = useState(false);
+  const [activeView, setActiveView] = useState<"home" | "settings">("home");
+
+  return (
+    <div className="flex min-h-dvh bg-hetu-cream text-hetu-text">
+      <aside
+        className={`flex shrink-0 flex-col border-r border-hetu-green/10 bg-white px-3 py-5 transition-[width] ${
+          sidebarExpanded ? "w-64" : "w-[4.5rem]"
+        }`}
+      >
+        <div className="flex items-center justify-between gap-2">
+          {sidebarExpanded && (
+            <span className="pl-2 font-serif text-lg text-hetu-green">Hetu</span>
+          )}
+          <button
+            type="button"
+            aria-label={sidebarExpanded ? "Recolher menu" : "Expandir menu"}
+            aria-expanded={sidebarExpanded}
+            onClick={() => setSidebarExpanded((expanded) => !expanded)}
+            className="flex h-10 w-10 items-center justify-center rounded-xl text-hetu-green hover:bg-hetu-cream focus-visible:outline-2 focus-visible:outline-hetu-gold"
+          >
+            <MenuIcon />
+          </button>
+        </div>
+
+        <nav aria-label="Menu principal" className="mt-8 flex flex-col gap-2">
+          <SidebarButton
+            label="Visão geral"
+            expanded={sidebarExpanded}
+            active={activeView === "home"}
+            onClick={() => setActiveView("home")}
+          >
+            <HomeIcon />
+          </SidebarButton>
+        </nav>
+
+        <div className="mt-auto flex flex-col gap-2 border-t border-hetu-green/10 pt-4">
+          <button
+            type="button"
+            onClick={onSignOut}
+            disabled={busy}
+            title={sidebarExpanded ? undefined : "Sair da conta"}
+            className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-sm text-hetu-text/70 hover:bg-hetu-cream disabled:opacity-50 ${
+              sidebarExpanded ? "w-full" : "w-11 justify-center"
+            }`}
+          >
+            <SignOutIcon />
+            {sidebarExpanded && <span>Sair da conta</span>}
+          </button>
+          <SidebarButton
+            label="Configurações"
+            expanded={sidebarExpanded}
+            active={activeView === "settings"}
+            onClick={() => setActiveView("settings")}
+          >
+            <SettingsIcon />
+          </SidebarButton>
+        </div>
+      </aside>
+
+      <main className="min-w-0 flex-1 px-5 py-6 sm:px-10 sm:py-9">
+        <header className="mb-8 border-b border-hetu-green/10 pb-5">
+          <p className="text-sm text-hetu-text/60">{email}</p>
+          <h1 className="mt-1 font-serif text-2xl text-hetu-green">
+            {activeView === "settings" ? "Configurações" : "Visão geral"}
+          </h1>
+        </header>
+
+        {error && (
+          <div
+            role="alert"
+            className="mb-6 flex items-start justify-between gap-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          >
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={onClearError}
+              aria-label="Fechar mensagem de erro"
+              className="font-semibold"
+            >
+              ×
+            </button>
+          </div>
+        )}
+
+        {activeView === "home" ? (
+          <section className="rounded-2xl border border-hetu-green/10 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="font-serif text-xl text-hetu-green">
+              Bem-vinda à Hetu
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-hetu-text/70">
+              Seu acesso está ativo. Os módulos de gestão serão adicionados
+              nesta área nas próximas etapas.
+            </p>
+            {isStandalone === false && (
+              <p className="mt-4 text-xs leading-5 text-hetu-text/60">
+                Você pode instalar o Hetu pelo menu do navegador para acessá-lo
+                como aplicativo.
+              </p>
+            )}
+          </section>
+        ) : (
+          <section className="max-w-3xl rounded-2xl border border-hetu-green/10 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="font-serif text-xl text-hetu-green">
+              Acesso e segurança
+            </h2>
+            <p className="mt-2 text-sm leading-6 text-hetu-text/70">
+              A preferência vale para toda a sua conta e será aplicada nos
+              dispositivos em que você entrar.
+            </p>
+
+            <label className="mt-7 flex cursor-pointer items-center justify-between gap-5 rounded-xl bg-hetu-cream p-4 sm:p-5">
+              <span>
+                <span className="block font-medium text-hetu-text">
+                  Usar biometria ao entrar
+                </span>
+                <span className="mt-1 block text-sm leading-5 text-hetu-text/65">
+                  {hasPasskey
+                    ? "Quando ativada, a verificação do dispositivo será solicitada ao abrir o app."
+                    : biometricEnabled
+                      ? "Preferência ativada, mas ainda sem passkey. Cadastre uma neste dispositivo ou continue sem biometria."
+                      : "Ativar vai cadastrar uma passkey neste dispositivo; a preferência vale para toda a conta."}
+                </span>
+              </span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={biometricEnabled}
+                disabled={busy || (!supportsWebAuthn && !biometricEnabled)}
+                onChange={(event) =>
+                  onBiometricPreferenceChange(event.currentTarget.checked)
+                }
+                className="h-6 w-11 shrink-0 cursor-pointer accent-hetu-green disabled:cursor-not-allowed"
+                aria-label="Usar biometria ao entrar"
+              />
+            </label>
+
+            {!hasPasskey && (
+              <button
+                type="button"
+                onClick={() => onBiometricPreferenceChange(true)}
+                disabled={busy || !supportsWebAuthn}
+                className="mt-4 min-h-11 rounded-xl bg-hetu-green px-5 text-sm font-medium text-white hover:bg-hetu-green/90 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Ativar biometria neste dispositivo
+              </button>
+            )}
+
+            {!supportsWebAuthn && !biometricEnabled && (
+              <p className="mt-3 text-xs leading-5 text-hetu-text/60">
+                Para ativar a biometria, abra o Hetu em um navegador atualizado
+                e compatível com passkeys.
+              </p>
+            )}
+            {hasPasskey && (
+              <p className="mt-4 text-xs leading-5 text-hetu-text/60">
+                O dispositivo pode solicitar biometria ou, conforme suas
+                configurações, o PIN/bloqueio de tela.
+              </p>
+            )}
+            {busy && (
+              <p className="mt-4 text-sm text-hetu-text/65" role="status">
+                Atualizando a configuração de segurança...
+              </p>
+            )}
+          </section>
+        )}
+      </main>
+    </div>
+  );
+}
+
+function SidebarButton({
+  label,
+  expanded,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  expanded: boolean;
+  active: boolean;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={expanded ? undefined : label}
+      aria-current={active ? "page" : undefined}
+      className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-sm ${
+        expanded ? "w-full" : "w-11 justify-center"
+      } ${
+        active
+          ? "bg-hetu-green text-white"
+          : "text-hetu-text/75 hover:bg-hetu-cream"
+      }`}
+    >
+      {children}
+      {expanded && <span>{label}</span>}
+    </button>
+  );
+}
+
+function MenuIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5">
+      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function HomeIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0">
+      <path d="m3.5 10 8.5-7 8.5 7v10.5h-6v-6h-5v6h-6V10Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SettingsIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0">
+      <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m19.4 13.5 1.1.9-1.6 2.8-1.4-.5a7.8 7.8 0 0 1-1.5.9l-.2 1.5h-3.3l-.2-1.5a7.8 7.8 0 0 1-1.5-.9l-1.4.5-1.6-2.8 1.1-.9a7.4 7.4 0 0 1 0-1.8l-1.1-.9 1.6-2.8 1.4.5a7.8 7.8 0 0 1 1.5-.9l.2-1.5h3.3l.2 1.5a7.8 7.8 0 0 1 1.5.9l1.4-.5 1.6 2.8-1.1.9a7.4 7.4 0 0 1 0 1.8Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function SignOutIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0">
+      <path d="M10 4H5.5v16H10M14 8l4 4-4 4m4-4H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
   );
 }
 
