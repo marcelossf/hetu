@@ -10,6 +10,8 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { ReactNode } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import { Home, LogOut, Menu, Settings, X } from "lucide-react";
 import {
   authenticateWithPasskey,
   getCurrentSession,
@@ -53,7 +55,6 @@ function LoadingIndicator({ label }: { label: string }) {
     </div>
   );
 }
-
 export function LoginScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const sessionRef = useRef<Session | null>(null);
@@ -380,13 +381,11 @@ export function LoginScreen() {
                   disabled={busyAction !== null}
                   className="mt-7 flex min-h-14 w-full items-center justify-center gap-3 rounded-xl bg-hetu-green px-5 py-3.5 text-sm font-medium text-white shadow-[0_8px_20px_rgba(31,61,43,0.16)] transition hover:bg-hetu-green/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hetu-gold disabled:cursor-wait disabled:opacity-70"
                 >
-                  {busyAction === "google" ? (
+                  {busyAction === "google" && (
                     <span
                       aria-hidden="true"
                       className="h-5 w-5 animate-spin rounded-full border-2 border-white/40 border-t-white"
                     />
-                  ) : (
-                    <GoogleIcon />
                   )}
                   {busyAction === "google"
                     ? "Conectando com o Google..."
@@ -595,12 +594,37 @@ function AuthenticatedApp({
 }: AuthenticatedAppProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeView, setActiveView] = useState<"home" | "settings">("home");
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
+
+  function startSidebarSwipe(event: ReactPointerEvent<HTMLElement>) {
+    swipeStart.current = { x: event.clientX, y: event.clientY };
+  }
+
+  function finishSidebarSwipe(event: ReactPointerEvent<HTMLElement>) {
+    const start = swipeStart.current;
+    swipeStart.current = null;
+    if (!sidebarExpanded || !start) return;
+
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (deltaX < -70 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      setSidebarExpanded(false);
+    }
+  }
 
   return (
     <div className="flex min-h-dvh bg-hetu-cream text-hetu-text">
       <aside
-        className={`flex shrink-0 flex-col border-r border-hetu-green/10 bg-white px-3 py-5 transition-[width] ${
-          sidebarExpanded ? "w-64" : "w-[4.5rem]"
+        aria-label="Menu lateral"
+        onPointerDown={startSidebarSwipe}
+        onPointerUp={finishSidebarSwipe}
+        onPointerCancel={() => {
+          swipeStart.current = null;
+        }}
+        className={`flex shrink-0 flex-col border-hetu-green/10 bg-white px-3 py-5 touch-pan-y ${
+          sidebarExpanded
+            ? "fixed inset-0 z-50 h-dvh w-full overflow-y-auto"
+            : "relative w-[4.5rem] border-r"
         }`}
       >
         <div className="flex items-center justify-between gap-2">
@@ -609,12 +633,16 @@ function AuthenticatedApp({
           )}
           <button
             type="button"
-            aria-label={sidebarExpanded ? "Recolher menu" : "Expandir menu"}
+            aria-label={sidebarExpanded ? "Fechar menu" : "Expandir menu"}
             aria-expanded={sidebarExpanded}
             onClick={() => setSidebarExpanded((expanded) => !expanded)}
             className="flex h-10 w-10 items-center justify-center rounded-xl text-hetu-green hover:bg-hetu-cream focus-visible:outline-2 focus-visible:outline-hetu-gold"
           >
-            <MenuIcon />
+            {sidebarExpanded ? (
+              <X aria-hidden="true" className="h-5 w-5" />
+            ) : (
+              <Menu aria-hidden="true" className="h-5 w-5" />
+            )}
           </button>
         </div>
 
@@ -623,9 +651,12 @@ function AuthenticatedApp({
             label="Visão geral"
             expanded={sidebarExpanded}
             active={activeView === "home"}
-            onClick={() => setActiveView("home")}
+            onClick={() => {
+              setActiveView("home");
+              setSidebarExpanded(false);
+            }}
           >
-            <HomeIcon />
+            <Home aria-hidden="true" className="h-5 w-5 shrink-0" />
           </SidebarButton>
         </nav>
 
@@ -639,21 +670,27 @@ function AuthenticatedApp({
               sidebarExpanded ? "w-full" : "w-11 justify-center"
             }`}
           >
-            <SignOutIcon />
+            <LogOut aria-hidden="true" className="h-5 w-5 shrink-0" />
             {sidebarExpanded && <span>Sair da conta</span>}
           </button>
           <SidebarButton
             label="Configurações"
             expanded={sidebarExpanded}
             active={activeView === "settings"}
-            onClick={() => setActiveView("settings")}
+            onClick={() => {
+              setActiveView("settings");
+              setSidebarExpanded(false);
+            }}
           >
-            <SettingsIcon />
+            <Settings aria-hidden="true" className="h-5 w-5 shrink-0" />
           </SidebarButton>
         </div>
       </aside>
 
-      <main className="min-w-0 flex-1 px-5 py-6 sm:px-10 sm:py-9">
+      <main
+        inert={sidebarExpanded}
+        className="min-w-0 flex-1 px-5 py-6 sm:px-10 sm:py-9"
+      >
         <header className="mb-8 border-b border-hetu-green/10 pb-5">
           <p className="text-sm text-hetu-text/60">{email}</p>
           <h1 className="mt-1 font-serif text-2xl text-hetu-green">
@@ -795,64 +832,5 @@ function SidebarButton({
       {children}
       {expanded && <span>{label}</span>}
     </button>
-  );
-}
-
-function MenuIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5">
-      <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="1.7" />
-    </svg>
-  );
-}
-
-function HomeIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0">
-      <path d="m3.5 10 8.5-7 8.5 7v10.5h-6v-6h-5v6h-6V10Z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SettingsIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0">
-      <path d="M12 15.2a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4Z" stroke="currentColor" strokeWidth="1.6" />
-      <path d="m19.4 13.5 1.1.9-1.6 2.8-1.4-.5a7.8 7.8 0 0 1-1.5.9l-.2 1.5h-3.3l-.2-1.5a7.8 7.8 0 0 1-1.5-.9l-1.4.5-1.6-2.8 1.1-.9a7.4 7.4 0 0 1 0-1.8l-1.1-.9 1.6-2.8 1.4.5a7.8 7.8 0 0 1 1.5-.9l.2-1.5h3.3l.2 1.5a7.8 7.8 0 0 1 1.5.9l1.4-.5 1.6 2.8-1.1.9a7.4 7.4 0 0 1 0 1.8Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function SignOutIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" className="h-5 w-5 shrink-0">
-      <path d="M10 4H5.5v16H10M14 8l4 4-4 4m4-4H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
-function GoogleIcon() {
-  return (
-    <svg aria-hidden="true" viewBox="0 0 48 48" className="h-5 w-5">
-      <path
-        fill="#EA4335"
-        d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5Z"
-        transform="translate(0 4)"
-      />
-      <path
-        fill="#4285F4"
-        d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.73 7.18l7.61 5.9c4.44-4.1 7.16-10.14 7.16-17.55Z"
-      />
-      <path
-        fill="#FBBC05"
-        d="M10.53 28.59a14.4 14.4 0 0 1 0-9.18l-7.98-6.19a23.9 23.9 0 0 0 0 21.56l7.98-6.19Z"
-        transform="translate(0 4)"
-      />
-      <path
-        fill="#34A853"
-        d="M24 48c6.48 0 11.93-2.13 15.9-5.8l-7.61-5.9c-2.12 1.42-4.84 2.26-8.29 2.26-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48Z"
-        transform="translate(0 -4)"
-      />
-    </svg>
   );
 }
