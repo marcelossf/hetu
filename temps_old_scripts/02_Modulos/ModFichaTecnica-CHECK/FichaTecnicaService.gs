@@ -3,7 +3,7 @@
  */
 
 function abrirModalFichaTecnica() {
-  const html = HtmlService.createHtmlOutputFromFile('02_Modulos/ModFichaTecnica/FichaTecnicaInterface')
+  const html = HtmlService.createHtmlOutputFromFile('02_Modulos/ModFichaTecnica-CHECK/FichaTecnicaInterface')
       .setWidth(750)
       .setHeight(600)
       .setTitle('Gerenciador de Fichas Técnicas');

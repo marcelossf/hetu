@@ -21,7 +21,8 @@ configuradas no provedor Google do Supabase, não no navegador.
 
 Após o login Google, a tela sugere cadastrar uma passkey, mas é possível
 continuar sem biometria. Quando ativada e cadastrada, a verificação é solicitada
-ao entrar; a preferência vale para a conta inteira. O dispositivo pode usar
+ao entrar em uma nova sessão do app; atualizar a aba atual preserva a sessão.
+A preferência vale para a conta inteira. O dispositivo pode usar
 biometria ou outro método de verificação do sistema, como PIN. O site não acessa
 nem armazena dados biométricos. As passkeys são validadas pelo servidor via
 WebAuthn e as tabelas não concedem acesso direto ao cliente.
@@ -35,7 +36,9 @@ Para habilitar esse fluxo:
    `20261118095900_create_supply_catalog_tables.sql` e
    `20261118103700_scope_supply_catalog_by_user.sql`. A última copia os
    cadastros existentes para cada conta Supabase ativa; não execute manualmente
-   uma migração que já esteja registrada como aplicada.
+   uma migração que já esteja registrada como aplicada. A migração
+   `20261118123000_create_product_production_sales.sql` adiciona fichas,
+   produção, ajustes de estoque, vendas e pagamentos.
 2. Configure `NEXT_PUBLIC_APP_URL` com a origem exata do ambiente, por exemplo
    `http://localhost:3000` localmente e `https://app.example.com` em produção.
 3. Configure `WEBAUTHN_SESSION_SECRET` com um segredo aleatório de pelo menos
@@ -61,9 +64,11 @@ verificação ao implementar os endpoints de negócio.
 ## Organização
 
 - `src/features/`: módulos de negócio e suas camadas `components`, `services`
-  e `facades`. A estrutura detalhada está em `src/features/README.md`.
-- `src/app/api/`: Route Handlers separados por domínio. Os handlers iniciais
-  respondem com HTTP 501 até que cada operação seja implementada.
+  e `facades`. Insumos, categorias, produtos, produção, vendas e canais estão
+  disponíveis após aplicar as migrações; a estrutura está em
+  `src/features/README.md`.
+- `src/app/api/`: Route Handlers protegidos separados por domínio. Operações de
+  estoque, produção e vendas são feitas por funções transacionais no Supabase.
 - `src/lib/`: integrações compartilhadas, incluindo o cliente Supabase.
 - `public/manifest.json`: manifesto da PWA; a aplicação pode ser instalada
   quando servida por HTTPS (ou localhost).

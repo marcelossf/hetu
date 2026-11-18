@@ -9,7 +9,7 @@ import type {
   PublicKeyCredentialCreationOptionsJSON,
   PublicKeyCredentialRequestOptionsJSON,
 } from "@simplewebauthn/browser";
-import type { Session } from "@supabase/supabase-js";
+import type { AuthChangeEvent, Session } from "@supabase/supabase-js";
 import { getSupabaseClient } from "@/lib/supabase";
 
 type RegistrationOptions = PublicKeyCredentialCreationOptionsJSON;
@@ -19,9 +19,39 @@ type PasskeyStatus = {
   hasPasskey: boolean;
   canRegisterPasskey: boolean;
   biometricEnabled: boolean;
+  unlocked: boolean;
 };
 
 let unlockedPageNonce: string | null = null;
+const pageNonceStorageKey = "hetu-page-nonce";
+const pageNoncePattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function createAndStorePageNonce(): string {
+  const pageNonce = window.crypto.randomUUID();
+  window.sessionStorage.setItem(pageNonceStorageKey, pageNonce);
+  return pageNonce;
+}
+
+export function getOrCreatePageNonce(): string {
+  if (typeof window === "undefined") return "";
+
+  const storedNonce = window.sessionStorage.getItem(pageNonceStorageKey);
+  if (storedNonce && pageNoncePattern.test(storedNonce)) return storedNonce;
+
+  return createAndStorePageNonce();
+}
+
+export function rotatePageNonce(): string {
+  if (typeof window === "undefined") return "";
+  return createAndStorePageNonce();
+}
+
+function clearStoredPageNonce(): void {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(pageNonceStorageKey);
+  }
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -35,13 +65,16 @@ async function requestJson(
   path: string,
   accessToken: string,
   body?: Record<string, unknown>,
+  pageNonce?: string,
 ): Promise<unknown> {
+  const nonce =
+    typeof body?.pageNonce === "string" ? body.pageNonce : pageNonce;
   const response = await fetch(path, {
     method: body ? "POST" : "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
-      ...(typeof body?.pageNonce === "string"
-        ? { "X-Hetu-Page-Nonce": body.pageNonce }
+      ...(nonce
+        ? { "X-Hetu-Page-Nonce": nonce }
         : {}),
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
@@ -112,12 +145,12 @@ export async function getCurrentSession(): Promise<Session | null> {
 }
 
 export function subscribeToSession(
-  onChange: (session: Session | null) => void,
+  onChange: (event: AuthChangeEvent, session: Session | null) => void,
 ): () => void {
   const {
     data: { subscription },
-  } = getSupabaseClient().auth.onAuthStateChange((_event, session) => {
-    onChange(session);
+  } = getSupabaseClient().auth.onAuthStateChange((event, session) => {
+    onChange(event, session);
   });
   return () => subscription.unsubscribe();
 }
@@ -147,6 +180,14 @@ export async function signOutFromHetu(): Promise<void> {
 
   const { error } = await getSupabaseClient().auth.signOut();
   unlockedPageNonce = null;
+  try {
+    clearStoredPageNonce();
+  } catch (storageError) {
+    console.warn(
+      "Não foi possível limpar o nonce temporário da sessão:",
+      storageError,
+    );
+  }
   if (error) throw error;
   if (cleanupError) {
     console.warn(
@@ -176,13 +217,20 @@ export function getUnlockedApiHeaders(accessToken: string): HeadersInit {
 
 export async function getPasskeyStatus(
   accessToken: string,
+  pageNonce: string,
 ): Promise<PasskeyStatus> {
-  const result = await requestJson("/api/auth/passkeys/status", accessToken);
+  const result = await requestJson(
+    "/api/auth/passkeys/status",
+    accessToken,
+    undefined,
+    pageNonce,
+  );
   if (
     !isRecord(result) ||
     typeof result.hasPasskey !== "boolean" ||
     typeof result.canRegisterPasskey !== "boolean" ||
-    typeof result.biometricEnabled !== "boolean"
+    typeof result.biometricEnabled !== "boolean" ||
+    typeof result.unlocked !== "boolean"
   ) {
     throw new Error("Não foi possível confirmar o estado da passkey.");
   }
@@ -190,6 +238,7 @@ export async function getPasskeyStatus(
     hasPasskey: result.hasPasskey,
     canRegisterPasskey: result.canRegisterPasskey,
     biometricEnabled: result.biometricEnabled,
+    unlocked: result.unlocked,
   };
 }
 

@@ -10,14 +10,28 @@ import {
 } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
-import { Home, LogOut, Menu, Package, Settings, Tags, X } from "lucide-react";
+import {
+  Boxes,
+  Factory,
+  Home,
+  LogOut,
+  Menu,
+  Package,
+  Settings,
+  ShoppingCart,
+  Store,
+  Tags,
+  X,
+} from "lucide-react";
 import {
   authenticateWithPasskey,
   getCurrentSession,
+  getOrCreatePageNonce,
   getPasskeyStatus,
   lockCurrentPage,
   markPageUnlocked,
   registerPasskey,
+  rotatePageNonce,
   setBiometricPreference,
   signInWithGoogle,
   signOutFromHetu,
@@ -26,6 +40,10 @@ import {
 } from "@/features/auth/services/auth-service";
 import { CategoriasInsumoScreen } from "@/features/cadastros/categorias/components/categorias-insumo-screen";
 import { InsumosScreen } from "@/features/cadastros/insumos/components/insumos-screen";
+import { ProducaoScreen } from "@/features/producao/components/producao-screen";
+import { ProdutosScreen } from "@/features/produtos/components/produtos-screen";
+import { CanaisVendaScreen } from "@/features/cadastros/canais/components/canais-venda-screen";
+import { VendasScreen } from "@/features/vendas/components/vendas-screen";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -56,13 +74,37 @@ function LoadingIndicator({ label }: { label: string }) {
     </div>
   );
 }
+
+type PageNonceState = {
+  value: string;
+  error: string;
+};
+
+function createPageNonceState(reuse: boolean): PageNonceState {
+  if (typeof window === "undefined") return { value: "", error: "" };
+  try {
+    return {
+      value: reuse ? getOrCreatePageNonce() : rotatePageNonce(),
+      error: "",
+    };
+  } catch (storageError) {
+    return {
+      value: window.crypto.randomUUID(),
+      error: `Não foi possível preservar a sessão deste navegador após uma atualização. ${
+        getErrorMessage(storageError)
+      }`,
+    };
+  }
+}
+
 export function LoginScreen() {
   const [session, setSession] = useState<Session | null>(null);
   const sessionRef = useRef<Session | null>(null);
   const [authReady, setAuthReady] = useState(false);
-  const [pageNonce] = useState(() =>
-    typeof window === "undefined" ? "" : window.crypto.randomUUID(),
+  const [pageNonceState, setPageNonceState] = useState(() =>
+    createPageNonceState(true),
   );
+  const pageNonce = pageNonceState.value;
   const [gate, setGate] = useState<GateState>("loading");
   const [canRegisterPasskey, setCanRegisterPasskey] = useState(false);
   const [hasPasskey, setHasPasskey] = useState(false);
@@ -85,16 +127,20 @@ export function LoginScreen() {
 
     async function initializeAuth() {
       try {
-        unsubscribe = subscribeToSession((nextSession) => {
+        unsubscribe = subscribeToSession((event, nextSession) => {
           if (!active) return;
 
-          if (sessionRef.current?.user.id !== nextSession?.user.id) {
+          if (
+            event !== "INITIAL_SESSION" &&
+            sessionRef.current?.user.id !== nextSession?.user.id
+          ) {
             setGate("loading");
             setCanRegisterPasskey(false);
             setHasPasskey(false);
             setBiometricEnabled(true);
             setError("");
             lockCurrentPage();
+            setPageNonceState(createPageNonceState(false));
           }
           sessionRef.current = nextSession;
           setSession(nextSession);
@@ -127,14 +173,19 @@ export function LoginScreen() {
     if (!session?.access_token) return;
 
     let active = true;
-    void getPasskeyStatus(session.access_token)
+    void getPasskeyStatus(session.access_token, pageNonce)
       .then((status) => {
         if (!active) return;
         setCanRegisterPasskey(status.canRegisterPasskey);
         setHasPasskey(status.hasPasskey);
         setBiometricEnabled(status.biometricEnabled);
         if (status.biometricEnabled && status.hasPasskey) {
-          setGate("locked");
+          if (status.unlocked) {
+            markPageUnlocked(pageNonce);
+            setGate("unlocked");
+          } else {
+            setGate("locked");
+          }
         } else if (status.biometricEnabled && !status.hasPasskey) {
           setGate("registration");
         } else {
@@ -311,6 +362,7 @@ export function LoginScreen() {
 
   const visibleGate =
     authReady && (!session || !session.access_token) ? "signed-out" : gate;
+  const visibleError = error || pageNonceState.error;
   const isLoading =
     visibleGate === "loading" ||
     busyAction === "register" ||
@@ -331,11 +383,14 @@ export function LoginScreen() {
         hasPasskey={hasPasskey}
         supportsWebAuthn={supportsWebAuthn}
         busy={busyAction !== null}
-        error={error}
+        error={visibleError}
         isStandalone={isStandalone}
         onBiometricPreferenceChange={handleBiometricPreferenceChange}
         onSignOut={() => handleSignOut()}
-        onClearError={() => setError("")}
+        onClearError={() => {
+          setError("");
+          setPageNonceState((current) => ({ ...current, error: "" }));
+        }}
       />
     );
   }
@@ -536,12 +591,12 @@ export function LoginScreen() {
           </>
         )}
 
-        {error && (
+        {visibleError && (
           <p
             role="alert"
             className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-800"
           >
-            {error}
+            {visibleError}
           </p>
         )}
 
@@ -598,7 +653,14 @@ function AuthenticatedApp({
 }: AuthenticatedAppProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
   const [activeView, setActiveView] = useState<
-    "home" | "insumos" | "categorias-insumo" | "settings"
+    | "home"
+    | "insumos"
+    | "categorias-insumo"
+    | "canais"
+    | "produtos"
+    | "producao"
+    | "vendas"
+    | "settings"
   >("home");
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
@@ -620,104 +682,168 @@ function AuthenticatedApp({
 
   return (
     <div className="flex min-h-dvh bg-hetu-cream text-hetu-text">
-      <aside
-        aria-label="Menu lateral"
-        onPointerDown={startSidebarSwipe}
-        onPointerUp={finishSidebarSwipe}
-        onPointerCancel={() => {
-          swipeStart.current = null;
-        }}
-        className={`flex shrink-0 flex-col border-hetu-green/10 bg-white px-3 py-5 touch-pan-y ${
-          sidebarExpanded
-            ? "fixed inset-0 z-50 h-dvh w-full overflow-y-auto"
-            : "relative w-[4.5rem] border-r"
-        }`}
-      >
-        <div className="flex items-center justify-between gap-2">
-          {sidebarExpanded && (
-            <span className="pl-2 font-serif text-lg text-hetu-green">Hetu</span>
-          )}
-          <button
-            type="button"
-            aria-label={sidebarExpanded ? "Fechar menu" : "Expandir menu"}
-            aria-expanded={sidebarExpanded}
-            onClick={() => setSidebarExpanded((expanded) => !expanded)}
-            className="flex h-10 w-10 items-center justify-center rounded-xl text-hetu-green hover:bg-hetu-cream focus-visible:outline-2 focus-visible:outline-hetu-gold"
-          >
-            {sidebarExpanded ? (
+      {!sidebarExpanded && (
+        <button
+          type="button"
+          aria-label="Abrir menu"
+          aria-expanded={false}
+          onClick={() => setSidebarExpanded(true)}
+          className="fixed left-4 top-4 z-40 flex h-11 w-11 items-center justify-center rounded-xl border border-hetu-green/10 bg-white text-hetu-green shadow-sm hover:bg-hetu-cream focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-hetu-gold"
+        >
+          <Menu aria-hidden="true" className="h-5 w-5" />
+        </button>
+      )}
+
+      {sidebarExpanded && (
+        <aside
+          aria-label="Menu principal"
+          aria-modal="true"
+          role="dialog"
+          onPointerDown={startSidebarSwipe}
+          onPointerUp={finishSidebarSwipe}
+          onPointerCancel={() => {
+            swipeStart.current = null;
+          }}
+          className="fixed inset-0 z-50 flex h-dvh w-full flex-col overflow-y-auto bg-white px-5 py-5 touch-pan-y sm:px-8"
+        >
+          <div className="flex items-center justify-between border-b border-hetu-green/10 pb-4">
+            <span className="pl-2 font-serif text-xl text-hetu-green">Hetu</span>
+            <button
+              type="button"
+              aria-label="Fechar menu"
+              aria-expanded={true}
+              onClick={() => setSidebarExpanded(false)}
+              className="flex h-11 w-11 items-center justify-center rounded-xl text-hetu-green hover:bg-hetu-cream focus-visible:outline-2 focus-visible:outline-hetu-gold"
+            >
               <X aria-hidden="true" className="h-5 w-5" />
-            ) : (
-              <Menu aria-hidden="true" className="h-5 w-5" />
-            )}
-          </button>
-        </div>
+            </button>
+          </div>
 
-        <nav aria-label="Menu principal" className="mt-8 flex flex-col gap-2">
-          <SidebarButton
-            label="Visão geral"
-            expanded={sidebarExpanded}
-            active={activeView === "home"}
-            onClick={() => {
-              setActiveView("home");
-              setSidebarExpanded(false);
-            }}
+          <nav
+            aria-label="Navegação"
+            className="mx-auto mt-5 flex w-full max-w-3xl flex-col gap-5"
           >
-            <Home aria-hidden="true" className="h-5 w-5 shrink-0" />
-          </SidebarButton>
-          <SidebarButton
-            label="Insumos"
-            expanded={sidebarExpanded}
-            active={activeView === "insumos"}
-            onClick={() => {
-              setActiveView("insumos");
-              setSidebarExpanded(false);
-            }}
-          >
-            <Package aria-hidden="true" className="h-5 w-5 shrink-0" />
-          </SidebarButton>
-          <SidebarButton
-            label="Categorias de insumo"
-            expanded={sidebarExpanded}
-            active={activeView === "categorias-insumo"}
-            onClick={() => {
-              setActiveView("categorias-insumo");
-              setSidebarExpanded(false);
-            }}
-          >
-            <Tags aria-hidden="true" className="h-5 w-5 shrink-0" />
-          </SidebarButton>
-        </nav>
+            <SidebarGroup label="Visão geral">
+              <SidebarButton
+                label="Início"
+                expanded={true}
+                active={activeView === "home"}
+                onClick={() => {
+                  setActiveView("home");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Home aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+            </SidebarGroup>
 
-        <div className="mt-auto flex flex-col gap-2 border-t border-hetu-green/10 pt-4">
-          <button
-            type="button"
-            onClick={onSignOut}
-            disabled={busy}
-            title={sidebarExpanded ? undefined : "Sair da conta"}
-            className={`flex min-h-11 items-center gap-3 rounded-xl px-3 text-left text-sm text-hetu-text/70 hover:bg-hetu-cream disabled:opacity-50 ${
-              sidebarExpanded ? "w-full" : "w-11 justify-center"
-            }`}
-          >
-            <LogOut aria-hidden="true" className="h-5 w-5 shrink-0" />
-            {sidebarExpanded && <span>Sair da conta</span>}
-          </button>
-          <SidebarButton
-            label="Configurações"
-            expanded={sidebarExpanded}
-            active={activeView === "settings"}
-            onClick={() => {
-              setActiveView("settings");
-              setSidebarExpanded(false);
-            }}
-          >
-            <Settings aria-hidden="true" className="h-5 w-5 shrink-0" />
-          </SidebarButton>
-        </div>
-      </aside>
+            <SidebarGroup label="Cadastros">
+              <SidebarButton
+                label="Insumos"
+                expanded={true}
+                active={activeView === "insumos"}
+                onClick={() => {
+                  setActiveView("insumos");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Package aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+              <SidebarButton
+                label="Categorias de insumo"
+                expanded={true}
+                active={activeView === "categorias-insumo"}
+                onClick={() => {
+                  setActiveView("categorias-insumo");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Tags aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+              <SidebarButton
+                label="Canais de venda"
+                expanded={true}
+                active={activeView === "canais"}
+                onClick={() => {
+                  setActiveView("canais");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Store aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+            </SidebarGroup>
+
+            <SidebarGroup label="Produtos">
+              <SidebarButton
+                label="Produtos e fichas técnicas"
+                expanded={true}
+                active={activeView === "produtos"}
+                onClick={() => {
+                  setActiveView("produtos");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Boxes aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+            </SidebarGroup>
+
+            <SidebarGroup label="Operações">
+              <SidebarButton
+                label="Produção"
+                expanded={true}
+                active={activeView === "producao"}
+                onClick={() => {
+                  setActiveView("producao");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Factory aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+              <SidebarButton
+                label="Vendas"
+                expanded={true}
+                active={activeView === "vendas"}
+                onClick={() => {
+                  setActiveView("vendas");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <ShoppingCart aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+            </SidebarGroup>
+
+            <SidebarGroup label="Conta">
+              <SidebarButton
+                label="Configurações"
+                expanded={true}
+                active={activeView === "settings"}
+                onClick={() => {
+                  setActiveView("settings");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Settings aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+              <button
+                type="button"
+                onClick={onSignOut}
+                disabled={busy}
+                className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm text-hetu-text/70 hover:bg-hetu-cream disabled:opacity-50"
+              >
+                <LogOut aria-hidden="true" className="h-5 w-5 shrink-0" />
+                <span>Sair da conta</span>
+              </button>
+            </SidebarGroup>
+          </nav>
+          <p className="mx-auto mt-6 w-full max-w-3xl pb-3 text-center text-xs text-hetu-text/50">
+            Deslize para a esquerda para fechar
+          </p>
+        </aside>
+      )}
 
       <main
         inert={sidebarExpanded}
-        className="min-w-0 flex-1 px-5 py-6 sm:px-10 sm:py-9"
+        className="min-w-0 flex-1 px-5 pb-6 pt-20 sm:px-10 sm:pb-9"
       >
         <header className="mb-8 border-b border-hetu-green/10 pb-5">
           <p className="text-sm text-hetu-text/60">{email}</p>
@@ -728,7 +854,15 @@ function AuthenticatedApp({
                 ? "Insumos"
                 : activeView === "categorias-insumo"
                   ? "Categorias de insumo"
-                  : "Visão geral"}
+                  : activeView === "canais"
+                    ? "Canais de venda"
+                    : activeView === "produtos"
+                      ? "Produtos e fichas técnicas"
+                      : activeView === "producao"
+                        ? "Produção"
+                        : activeView === "vendas"
+                          ? "Vendas"
+                          : "Visão geral"}
           </h1>
         </header>
 
@@ -755,8 +889,8 @@ function AuthenticatedApp({
               Bem-vinda à Hetu
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-hetu-text/70">
-              Seu acesso está ativo. Use o menu para cadastrar e organizar
-              insumos e categorias.
+              Seu acesso está ativo. Use o menu para organizar cadastros,
+              produtos, produção e vendas.
             </p>
             {isStandalone === false && (
               <p className="mt-4 text-xs leading-5 text-hetu-text/60">
@@ -775,6 +909,14 @@ function AuthenticatedApp({
           />
         ) : activeView === "categorias-insumo" ? (
           <CategoriasInsumoScreen accessToken={accessToken} />
+        ) : activeView === "canais" ? (
+          <CanaisVendaScreen accessToken={accessToken} />
+        ) : activeView === "produtos" ? (
+          <ProdutosScreen accessToken={accessToken} />
+        ) : activeView === "producao" ? (
+          <ProducaoScreen accessToken={accessToken} />
+        ) : activeView === "vendas" ? (
+          <VendasScreen accessToken={accessToken} />
         ) : (
           <section className="max-w-3xl rounded-2xl border border-hetu-green/10 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="font-serif text-xl text-hetu-green">
@@ -876,5 +1018,22 @@ function SidebarButton({
       {children}
       {expanded && <span>{label}</span>}
     </button>
+  );
+}
+
+function SidebarGroup({
+  label,
+  children,
+}: {
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <section>
+      <h2 className="mb-2 px-3 text-xs font-semibold uppercase tracking-[0.12em] text-hetu-text/50">
+        {label}
+      </h2>
+      <div className="flex flex-col gap-1">{children}</div>
+    </section>
   );
 }

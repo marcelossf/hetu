@@ -2,7 +2,7 @@
  * Abre a janela modal da Calculadora e Ordem de Produção
  */
 function abrirJanelaProducao() {
-  const html = HtmlService.createTemplateFromFile('02_Modulos/ModProducao/ProducaoInterface')
+  const html = HtmlService.createTemplateFromFile('02_Modulos/ModProducao-CHECK/ProducaoInterface')
     .evaluate()
     .setWidth(900)
     .setHeight(650);

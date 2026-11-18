@@ -32,7 +32,7 @@ type SignedChallenge = {
   issuedAt: number;
 };
 
-// The nonce exists only in page memory, so a saved unlock cookie cannot unlock a later app opening.
+// The tab-scoped nonce survives refreshes without unlocking a separate app session.
 type UnlockedSession = {
   userId: string;
   pageNonce: string;
@@ -331,6 +331,22 @@ function unlockedCookie(userId: string, pageNonce: string, secure: boolean): str
   );
 }
 
+function hasUnlockedPageSession(
+  request: NextRequest,
+  userId: string,
+  pageNonce: string | null,
+): boolean {
+  const value = unseal(request.cookies.get(unlockedCookieName)?.value);
+  return (
+    isRecord(value) &&
+    value.userId === userId &&
+    typeof value.pageNonce === "string" &&
+    value.pageNonce === pageNonce &&
+    typeof value.expiresAt === "number" &&
+    value.expiresAt > Date.now()
+  );
+}
+
 function clearCookie(name: string, secure: boolean): string {
   return serializeCookie(name, "", secure, 0);
 }
@@ -555,11 +571,20 @@ export async function getPasskeyStatus(request: NextRequest): Promise<Response> 
     getBiometricPreference(context),
   ]);
   const canRegisterPasskey = hasRecentGoogleLogin(context);
+  const requiresPasskey = biometricEnabled && credentials.length > 0;
+  const unlocked =
+    !requiresPasskey ||
+    hasUnlockedPageSession(
+      request,
+      context.userId,
+      request.headers.get("x-hetu-page-nonce"),
+    );
 
   return Response.json({
     hasPasskey: credentials.length > 0,
     canRegisterPasskey,
     biometricEnabled,
+    unlocked,
   });
 }
 
@@ -842,16 +867,7 @@ export async function requireUnlockedUser(
   }
 
   const pageNonce = request.headers.get("x-hetu-page-nonce");
-  const value = unseal(request.cookies.get(unlockedCookieName)?.value);
-
-  if (
-    !isRecord(value) ||
-    value.userId !== context.userId ||
-    typeof value.pageNonce !== "string" ||
-    value.pageNonce !== pageNonce ||
-    typeof value.expiresAt !== "number" ||
-    value.expiresAt <= Date.now()
-  ) {
+  if (!hasUnlockedPageSession(request, context.userId, pageNonce)) {
     return Response.json(
       { error: "Desbloqueie o aplicativo com a passkey deste dispositivo." },
       { status: 401 },

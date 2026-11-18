@@ -28,7 +28,8 @@ ativa. Os registros originais mantêm seus IDs para a conta ativa mais antiga;
 as cópias recebem novos IDs.
 
 ### `db_categoria_produto`
-- `id` (INT, PK)
+- `id` (INT, PK, gerado por identity)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `nome` (TEXT, NOT NULL)
 
 ### `db_fornecedores`
@@ -38,7 +39,8 @@ as cópias recebem novos IDs.
 - `ativo` (TEXT, DEFAULT 'Sim')
 
 ### `db_canais_vendas`
-- `id` (INT, PK)
+- `id` (INT, PK, gerado por identity)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `nome` (TEXT, NOT NULL)
 - `endereco` (TEXT)
 - `ativo` (TEXT, DEFAULT 'Sim')
@@ -50,7 +52,7 @@ as cópias recebem novos IDs.
 - `unidade` (TEXT, NOT NULL)
 - `categoria` (TEXT)
 - `custo_estimado_unitario` (NUMERIC(10,2), DEFAULT 0.00)
-- `estoque_atual` (NUMERIC(10,2), DEFAULT 0.00)
+- `estoque_atual` (NUMERIC(12,4), DEFAULT 0.00)
 - `ativo` (TEXT, DEFAULT 'Sim')
 
 O nome de insumo é único por usuário, sem distinção entre maiúsculas/minúsculas.
@@ -63,6 +65,7 @@ insumos do mesmo usuário.
 
 ### `db_fichas`
 - `id_ficha` (INT, PK)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `nome_receita` (TEXT, NOT NULL)
 - `rendimento` (NUMERIC(10,2), DEFAULT 1.00)
 - `custo_embalagem` (NUMERIC(10,2), DEFAULT 0.00)
@@ -70,16 +73,65 @@ insumos do mesmo usuário.
 - `custo_armazenamento` (NUMERIC(10,2), DEFAULT 0.00)
 - `custo_total` (NUMERIC(10,2), DEFAULT 0.00)
 - `custo_unitario` (NUMERIC(10,2), DEFAULT 0.00)
-- `id_categoria` (INT, FK -> `db_categoria_produto(id)`)
+- `id_categoria` (INT, FK composta -> `db_categoria_produto(user_id, id)`)
 - `preco_venda` (NUMERIC(10,2), DEFAULT 0.00)
 - `estoque_atual` (NUMERIC(10,2), DEFAULT 0.00)
 - `ativo` (TEXT, DEFAULT 'Sim')
 
 ### `db_fichas_itens`
 - `id_item` (INT, PK)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `id_ficha` (INT, FK -> `db_fichas(id_ficha)` ON DELETE CASCADE)
-- `id_insumo` (INT, FK -> `db_insumos(id_insumo)`)
-- `qtd_insumo` (NUMERIC(10,4), DEFAULT 0.0000)
+- `id_insumo` (INT, FK composta -> `db_insumos(user_id, id_insumo)`)
+- `qtd_insumo` (NUMERIC(10,4), quantidade por unidade produzida)
+
+Produtos, categorias, canais, produção, ajustes de estoque e vendas pertencem
+ao usuário autenticado. As tabelas usam RLS e chaves estrangeiras compostas
+para impedir vínculos entre dados de contas diferentes. Categorias e canais
+permitem CRUD não destrutivo pela API; fichas e operações são gravadas por
+funções transacionais que obtêm o usuário por `auth.uid()`.
+
+O custo da ficha é calculado no servidor com os custos atuais dos insumos e os
+custos adicionais do lote, normalizados pelo rendimento. A ficha armazena as
+quantidades por unidade de produto (`rendimento` normalizado para 1), o custo
+unitário e o estoque acabado. A migração
+`supabase/migrations/20261118123000_create_product_production_sales.sql`
+cria o schema e as funções protegidas `save_ficha`,
+`adjust_product_stock`, `register_production`, `register_sale` e `cancel_sale`.
+
+### `db_producao`
+- `id_producao` (INT, PK)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `data_producao` (TIMESTAMPTZ, DEFAULT NOW())
+- `id_produto` (INT, FK composta -> `db_fichas(user_id, id_ficha)`)
+- `qtd_produzida` (NUMERIC(10,2))
+- `custo_unitario_momento` (NUMERIC(10,2))
+- `custo_total_lote` (NUMERIC(10,2))
+- `observacao` (TEXT)
+
+### `db_producao_itens`
+- `id_item` (INT, PK)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `id_producao` (INT, FK composta -> `db_producao(user_id, id_producao)`)
+- `id_insumo` (INT, FK composta -> `db_insumos(user_id, id_insumo)`)
+- `qtd_consumida` (NUMERIC(12,4))
+- `custo_unitario_momento` (NUMERIC(10,2))
+- `custo_total` (NUMERIC(10,2))
+
+O registro da produção bloqueia a operação se faltar qualquer insumo e atualiza
+insumos, estoque do produto acabado e histórico em uma única transação.
+
+### `db_ajustes_estoque_produto`
+- `id_ajuste` (INT, PK)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `id_ficha` (INT, FK composta -> `db_fichas(user_id, id_ficha)`)
+- `tipo` (TEXT, `saldo_inicial` ou `ajuste`)
+- `quantidade_delta` (NUMERIC(10,2), diferente de zero)
+- `motivo` (TEXT, obrigatório)
+- `criado_em` (TIMESTAMPTZ, DEFAULT NOW())
+
+O estoque inicial e os ajustes manuais são auditáveis; produção e vendas
+possuem seus próprios históricos de movimentação.
 
 ### `db_fichas_historico_custos`
 - `id_historico` (INT, PK)
@@ -106,33 +158,43 @@ insumos do mesmo usuário.
 - `valor_total` (NUMERIC(10,2), DEFAULT 0.00)
 - `valor_unitario` (NUMERIC(10,2), DEFAULT 0.00)
 
-### `db_producao`
-- `id_producao` (INT, PK)
-- `data_producao` (TIMESTAMP WITH TIME ZONE)
-- `id_produto` (INT, FK -> `db_fichas(id_ficha)`)
-- `qtd_produzida` (NUMERIC(10,2), DEFAULT 0.00)
-- `custo_unitario_momento` (NUMERIC(10,2), DEFAULT 0.00)
-- `custo_total_lote` (NUMERIC(10,2), DEFAULT 0.00)
-- `observacao` (TEXT)
-
 ### `db_vendas_cabecalho`
 - `id` (INT, PK)
-- `data_venda` (TIMESTAMP WITH TIME ZONE)
-- `id_canal` (INT, FK -> `db_canais_vendas(id)`)
-- `valor_total_pedido` (NUMERIC(10,2), DEFAULT 0.00)
-- `desconto` (NUMERIC(10,2), DEFAULT 0.00)
-- `publico` (TEXT)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `data_venda` (TIMESTAMPTZ, DEFAULT NOW())
+- `id_canal` (INT, FK composta -> `db_canais_vendas(user_id, id)`)
+- `subtotal_pedido` (NUMERIC(10,2))
+- `desconto` (NUMERIC(10,2), valor monetário calculado no front-end)
+- `valor_total_pedido` (NUMERIC(10,2), subtotal menos desconto)
+- `status` (TEXT, `concluida` ou `cancelada`)
 - `observacoes` (TEXT)
+- `cancelada_em` (TIMESTAMPTZ)
 
 ### `db_vendas_itens`
 - `id_venda_item` (INT, PK)
-- `id_venda` (INT, FK -> `db_vendas_cabecalho(id)` ON DELETE CASCADE)
-- `id_produto` (INT, FK -> `db_fichas(id_ficha)`)
-- `quantidade` (NUMERIC(10,2), DEFAULT 0.00)
-- `preco_venda_unitario` (NUMERIC(10,2), DEFAULT 0.00)
-- `custo_unitario_historico` (NUMERIC(10,2), DEFAULT 0.00)
-- `desconto` (NUMERIC(10,2), DEFAULT 0.00)
-- `subtotal` (NUMERIC(10,2), DEFAULT 0.00)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `id_venda` (INT, FK composta -> `db_vendas_cabecalho(user_id, id)`)
+- `id_produto` (INT, FK composta -> `db_fichas(user_id, id_ficha)`)
+- `nome_produto` (TEXT, cópia histórica do nome)
+- `quantidade` (NUMERIC(10,2))
+- `preco_venda_unitario` (NUMERIC(10,2))
+- `custo_unitario_historico` (NUMERIC(10,2))
+- `desconto` (NUMERIC(10,2), reservado para desconto por item)
+- `subtotal` (NUMERIC(10,2))
+
+### `db_vendas_pagamentos`
+- `id_pagamento` (INT, PK)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `id_venda` (INT, FK composta -> `db_vendas_cabecalho(user_id, id)`)
+- `forma_pagamento` (TEXT: `pix`, `dinheiro`, `cartao_debito`,
+  `cartao_credito`, `transferencia` ou `outro`)
+- `valor` (NUMERIC(10,2), maior que zero)
+- `criado_em` (TIMESTAMPTZ, DEFAULT NOW())
+
+O percentual de desconto não é persistido: a interface calcula o valor em
+moeda e apenas esse valor é armazenado. Uma venda pode ter vários pagamentos,
+mas precisa estar quitada no registro. O cancelamento preserva o histórico de
+pagamentos e repõe o estoque; eventuais reembolsos são tratados fora do Hetu.
 
 ---
 
