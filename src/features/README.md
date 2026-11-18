@@ -5,10 +5,12 @@ e a apresentação/formatação em `facades`. Em `cadastros`, cada submódulo ma
 as próprias três camadas.
 
 - `auth`: autenticação Google com Supabase Auth.
-- `cadastros`: insumos, fornecedores, categorias e canais.
+- `cadastros`: categorias e insumos estão implementados; fornecedores e canais
+  permanecem pendentes.
 - `produtos`: produtos e fichas técnicas.
 - `producao`: registro de produção.
 - `vendas`: saídas e vendas.
 
-Os arquivos `.gitkeep` mantêm as pastas vazias no Git até a implementação dos
-primeiros componentes, serviços e facades.
+Cada módulo separa componentes de interface, serviços de acesso à API e facades
+de apresentação. Os endpoints de cadastros autenticam a sessão e exigem o
+desbloqueio da página quando a proteção por passkey está ativa.

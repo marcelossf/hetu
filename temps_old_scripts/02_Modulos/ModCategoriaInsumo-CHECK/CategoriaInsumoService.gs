@@ -2,7 +2,7 @@
  * Abre o Modal de Gerenciamento de Categorias de Insumo
  */
 function abrirModalCategoriasInsumo() {
-  const html = HtmlService.createHtmlOutputFromFile('02_Modulos/ModCategoriaInsumo/FormCategoriaInsumo')
+  const html = HtmlService.createHtmlOutputFromFile('02_Modulos/ModCategoriaInsumo-CHECK/FormCategoriaInsumo')
       .setWidth(480)
       .setHeight(420)
       .setTitle('Gerenciar Categorias de Insumo');

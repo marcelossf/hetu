@@ -1,6 +1,72 @@
 export type Database = {
   public: {
     Tables: {
+      db_unidades: {
+        Row: {
+          id: number;
+          nome: string;
+        };
+        Insert: {
+          id?: number;
+          nome: string;
+        };
+        Update: {
+          id?: number;
+          nome?: string;
+        };
+        Relationships: [];
+      };
+      db_categoria_insumo: {
+        Row: {
+          id: number;
+          nome: string;
+          user_id: string;
+        };
+        Insert: {
+          id?: number;
+          nome: string;
+          user_id?: string;
+        };
+        Update: {
+          id?: number;
+          nome?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      db_insumos: {
+        Row: {
+          id_insumo: number;
+          nome: string;
+          unidade: string;
+          categoria: string | null;
+          custo_estimado_unitario: number;
+          estoque_atual: number;
+          ativo: string;
+          user_id: string;
+        };
+        Insert: {
+          id_insumo?: number;
+          nome: string;
+          unidade: string;
+          categoria?: string | null;
+          custo_estimado_unitario?: number;
+          estoque_atual?: number;
+          ativo?: string;
+          user_id?: string;
+        };
+        Update: {
+          id_insumo?: number;
+          nome?: string;
+          unidade?: string;
+          categoria?: string | null;
+          custo_estimado_unitario?: number;
+          estoque_atual?: number;
+          ativo?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       user_security_settings: {
         Row: {
           user_id: string;

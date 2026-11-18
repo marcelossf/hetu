@@ -2,7 +2,7 @@
  * Abre o Modal de Gerenciamento de Insumos
  */
 function abrirModalInsumos() {
-  const html = HtmlService.createHtmlOutputFromFile('02_Modulos/ModInsumo/InsumoInterface')
+  const html = HtmlService.createHtmlOutputFromFile('02_Modulos/ModInsumo-CHECK/InsumoInterface')
       .setWidth(680)
       .setHeight(520)
       .setTitle('Gerenciamento de Insumos');

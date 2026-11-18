@@ -9,9 +9,8 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { Session } from "@supabase/supabase-js";
-import type { ReactNode } from "react";
-import type { PointerEvent as ReactPointerEvent } from "react";
-import { Home, LogOut, Menu, Settings, X } from "lucide-react";
+import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { Home, LogOut, Menu, Package, Settings, Tags, X } from "lucide-react";
 import {
   authenticateWithPasskey,
   getCurrentSession,
@@ -25,6 +24,8 @@ import {
   subscribeToSession,
   supportsPasskeys,
 } from "@/features/auth/services/auth-service";
+import { CategoriasInsumoScreen } from "@/features/cadastros/categorias/components/categorias-insumo-screen";
+import { InsumosScreen } from "@/features/cadastros/insumos/components/insumos-screen";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -324,6 +325,7 @@ export function LoginScreen() {
   if (visibleGate === "unlocked" && session) {
     return (
       <AuthenticatedApp
+        accessToken={session.access_token}
         email={session.user.email ?? ""}
         biometricEnabled={biometricEnabled}
         hasPasskey={hasPasskey}
@@ -568,6 +570,7 @@ export function LoginScreen() {
 }
 
 type AuthenticatedAppProps = {
+  accessToken: string;
   email: string;
   biometricEnabled: boolean;
   hasPasskey: boolean;
@@ -581,6 +584,7 @@ type AuthenticatedAppProps = {
 };
 
 function AuthenticatedApp({
+  accessToken,
   email,
   biometricEnabled,
   hasPasskey,
@@ -593,7 +597,9 @@ function AuthenticatedApp({
   onClearError,
 }: AuthenticatedAppProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [activeView, setActiveView] = useState<"home" | "settings">("home");
+  const [activeView, setActiveView] = useState<
+    "home" | "insumos" | "categorias-insumo" | "settings"
+  >("home");
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   function startSidebarSwipe(event: ReactPointerEvent<HTMLElement>) {
@@ -658,6 +664,28 @@ function AuthenticatedApp({
           >
             <Home aria-hidden="true" className="h-5 w-5 shrink-0" />
           </SidebarButton>
+          <SidebarButton
+            label="Insumos"
+            expanded={sidebarExpanded}
+            active={activeView === "insumos"}
+            onClick={() => {
+              setActiveView("insumos");
+              setSidebarExpanded(false);
+            }}
+          >
+            <Package aria-hidden="true" className="h-5 w-5 shrink-0" />
+          </SidebarButton>
+          <SidebarButton
+            label="Categorias de insumo"
+            expanded={sidebarExpanded}
+            active={activeView === "categorias-insumo"}
+            onClick={() => {
+              setActiveView("categorias-insumo");
+              setSidebarExpanded(false);
+            }}
+          >
+            <Tags aria-hidden="true" className="h-5 w-5 shrink-0" />
+          </SidebarButton>
         </nav>
 
         <div className="mt-auto flex flex-col gap-2 border-t border-hetu-green/10 pt-4">
@@ -694,7 +722,13 @@ function AuthenticatedApp({
         <header className="mb-8 border-b border-hetu-green/10 pb-5">
           <p className="text-sm text-hetu-text/60">{email}</p>
           <h1 className="mt-1 font-serif text-2xl text-hetu-green">
-            {activeView === "settings" ? "Configurações" : "Visão geral"}
+            {activeView === "settings"
+              ? "Configurações"
+              : activeView === "insumos"
+                ? "Insumos"
+                : activeView === "categorias-insumo"
+                  ? "Categorias de insumo"
+                  : "Visão geral"}
           </h1>
         </header>
 
@@ -721,8 +755,8 @@ function AuthenticatedApp({
               Bem-vinda à Hetu
             </h2>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-hetu-text/70">
-              Seu acesso está ativo. Os módulos de gestão serão adicionados
-              nesta área nas próximas etapas.
+              Seu acesso está ativo. Use o menu para cadastrar e organizar
+              insumos e categorias.
             </p>
             {isStandalone === false && (
               <p className="mt-4 text-xs leading-5 text-hetu-text/60">
@@ -731,6 +765,16 @@ function AuthenticatedApp({
               </p>
             )}
           </section>
+        ) : activeView === "insumos" ? (
+          <InsumosScreen
+            accessToken={accessToken}
+            onOpenCategories={() => {
+              setActiveView("categorias-insumo");
+              setSidebarExpanded(false);
+            }}
+          />
+        ) : activeView === "categorias-insumo" ? (
+          <CategoriasInsumoScreen accessToken={accessToken} />
         ) : (
           <section className="max-w-3xl rounded-2xl border border-hetu-green/10 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="font-serif text-xl text-hetu-green">

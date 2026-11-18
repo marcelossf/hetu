@@ -7,12 +7,25 @@ Este documento é a **Fonte Única da Verdade** sobre a estrutura relacional do 
 ## 1. Grupo 1: Tabelas de Apoio e Cadastros Base
 
 ### `db_unidades`
-- `id` (INT, PK)
+- `id` (INT, PK, gerado por identity)
 - `nome` (TEXT, NOT NULL)
 
 ### `db_categoria_insumo`
-- `id` (INT, PK)
+- `id` (INT, PK, gerado por identity)
 - `nome` (TEXT, NOT NULL)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+
+Unidades são compartilhadas e somente usuários autenticados podem lê-las.
+Categorias e insumos pertencem ao usuário autenticado (`auth.uid()`), com RLS
+limitando leitura, inclusão e atualização ao proprietário. Os nomes de
+categorias e insumos são únicos por usuário, sem distinção entre
+maiúsculas/minúsculas; não há exclusão pela API. A migração
+`supabase/migrations/20261118095900_create_supply_catalog_tables.sql` cria as
+tabelas e as unidades iniciais `un`, `g`, `kg`, `ml` e `l`. A migração
+`supabase/migrations/20261118103700_scope_supply_catalog_by_user.sql` aplica o
+isolamento por usuário e copia o catálogo existente para cada conta Supabase
+ativa. Os registros originais mantêm seus IDs para a conta ativa mais antiga;
+as cópias recebem novos IDs.
 
 ### `db_categoria_produto`
 - `id` (INT, PK)
@@ -31,13 +44,18 @@ Este documento é a **Fonte Única da Verdade** sobre a estrutura relacional do 
 - `ativo` (TEXT, DEFAULT 'Sim')
 
 ### `db_insumos`
-- `id_insumo` (INT, PK)
+- `id_insumo` (INT, PK, gerado por identity)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `nome` (TEXT, NOT NULL)
 - `unidade` (TEXT, NOT NULL)
 - `categoria` (TEXT)
 - `custo_estimado_unitario` (NUMERIC(10,2), DEFAULT 0.00)
 - `estoque_atual` (NUMERIC(10,2), DEFAULT 0.00)
 - `ativo` (TEXT, DEFAULT 'Sim')
+
+O nome de insumo é único por usuário, sem distinção entre maiúsculas/minúsculas.
+Ao renomear uma categoria, o banco atualiza o texto correspondente somente nos
+insumos do mesmo usuário.
 
 ---
 

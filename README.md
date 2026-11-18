@@ -30,10 +30,12 @@ Para habilitar esse fluxo:
 
 1. No terminal, na raiz do repositório, vincule o projeto com
    `npx supabase link --project-ref SEU_PROJECT_REF` e aplique as migrações
-   pendentes com `npx supabase db push`. Isso inclui
-   `20261117150000_create_user_passkeys.sql` e
-   `20261117170000_add_biometric_preferences.sql`; não execute manualmente uma
-   migração que já esteja registrada como aplicada.
+   pendentes com `npx supabase db push`. Isso inclui as migrações de passkeys,
+   preferências biométricas e cadastros, como
+   `20261118095900_create_supply_catalog_tables.sql` e
+   `20261118103700_scope_supply_catalog_by_user.sql`. A última copia os
+   cadastros existentes para cada conta Supabase ativa; não execute manualmente
+   uma migração que já esteja registrada como aplicada.
 2. Configure `NEXT_PUBLIC_APP_URL` com a origem exata do ambiente, por exemplo
    `http://localhost:3000` localmente e `https://app.example.com` em produção.
 3. Configure `WEBAUTHN_SESSION_SECRET` com um segredo aleatório de pelo menos
