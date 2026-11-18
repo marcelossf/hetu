@@ -32,6 +32,11 @@ as cópias recebem novos IDs.
 - `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `nome` (TEXT, NOT NULL)
 
+Se a tabela já existir sem `user_id`, a migração
+`supabase/migrations/20261118123000_create_product_production_sales.sql`
+atribui as categorias existentes à conta Supabase ativa mais antiga e as copia
+para as demais contas ativas, preservando os IDs originais para a primeira conta.
+
 ### `db_fornecedores`
 - `id_fornecedor` (INT, PK)
 - `nome` (TEXT, NOT NULL)
@@ -98,6 +103,9 @@ unitário e o estoque acabado. A migração
 `supabase/migrations/20261118123000_create_product_production_sales.sql`
 cria o schema e as funções protegidas `save_ficha`,
 `adjust_product_stock`, `register_production`, `register_sale` e `cancel_sale`.
+Nas tabelas legadas de produtos, produção e vendas que ainda não tenham
+`user_id`, os registros existentes são atribuídos à conta Supabase ativa mais
+antiga. Sequências ausentes para IDs também são criadas e sincronizadas.
 
 ### `db_producao`
 - `id_producao` (INT, PK)
