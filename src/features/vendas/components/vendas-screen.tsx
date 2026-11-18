@@ -587,7 +587,10 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
                       Venda #{sale.id} · {sale.nome_canal}
                     </h3>
                     <p className="mt-1 text-xs text-hetu-text/60">
-                      {new Date(sale.data_venda).toLocaleString("pt-BR")} ·{" "}
+                      {sale.data_venda
+                        ? new Date(sale.data_venda).toLocaleString("pt-BR")
+                        : "Data não informada"}{" "}
+                      ·{" "}
                       {sale.status === "concluida" ? "Concluída" : "Cancelada"}
                     </p>
                   </div>

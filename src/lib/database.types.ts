@@ -286,8 +286,8 @@ export type Database = {
         Row: {
           id: number;
           user_id: string;
-          data_venda: string;
-          id_canal: number;
+          data_venda: string | null;
+          id_canal: number | null;
           subtotal_pedido: number;
           desconto: number;
           valor_total_pedido: number;
@@ -298,8 +298,8 @@ export type Database = {
         Insert: {
           id?: number;
           user_id?: string;
-          data_venda?: string;
-          id_canal: number;
+          data_venda?: string | null;
+          id_canal?: number | null;
           subtotal_pedido: number;
           desconto?: number;
           valor_total_pedido: number;
@@ -310,8 +310,8 @@ export type Database = {
         Update: {
           id?: number;
           user_id?: string;
-          data_venda?: string;
-          id_canal?: number;
+          data_venda?: string | null;
+          id_canal?: number | null;
           subtotal_pedido?: number;
           desconto?: number;
           valor_total_pedido?: number;

@@ -203,6 +203,10 @@ O percentual de desconto não é persistido: a interface calcula o valor em
 moeda e apenas esse valor é armazenado. Uma venda pode ter vários pagamentos,
 mas precisa estar quitada no registro. O cancelamento preserva o histórico de
 pagamentos e repõe o estoque; eventuais reembolsos são tratados fora do Hetu.
+Para vendas legadas, a migração
+`supabase/migrations/20261118135000_reconcile_legacy_sales_schema.sql`
+completa os campos ausentes, deriva o subtotal dos itens (ou do total mais o
+desconto quando não há itens) e recupera o nome histórico a partir do produto.
 
 ---
 

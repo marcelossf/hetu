@@ -62,7 +62,10 @@ export const GET = createProtectedSupabaseHandler(
       produtos: products.data,
       vendas: sales.data.map((sale) => ({
         ...sale,
-        nome_canal: channelNames.get(sale.id_canal) ?? "Canal inativo",
+        nome_canal:
+          sale.id_canal === null
+            ? "Canal não informado"
+            : channelNames.get(sale.id_canal) ?? "Canal inativo",
         itens: saleItems.data.filter((item) => item.id_venda === sale.id),
         pagamentos: payments.data.filter(
           (payment) => payment.id_venda === sale.id,

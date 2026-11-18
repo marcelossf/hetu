@@ -24,8 +24,8 @@ const formasPagamento: readonly FormaPagamento[] = [
 ];
 export type Venda = {
   id: number;
-  data_venda: string;
-  id_canal: number;
+  data_venda: string | null;
+  id_canal: number | null;
   nome_canal: string;
   subtotal_pedido: number;
   desconto: number;
@@ -122,8 +122,10 @@ export async function getVendaCatalogo(
     }
     return {
       id: numberValue(item.id),
-      data_venda: String(item.data_venda),
-      id_canal: numberValue(item.id_canal),
+      data_venda:
+        typeof item.data_venda === "string" ? item.data_venda : null,
+      id_canal:
+        item.id_canal === null ? null : numberValue(item.id_canal),
       nome_canal: String(item.nome_canal),
       subtotal_pedido: numberValue(item.subtotal_pedido),
       desconto: numberValue(item.desconto),
