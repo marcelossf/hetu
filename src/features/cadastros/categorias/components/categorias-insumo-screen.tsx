@@ -13,6 +13,7 @@ import {
   updateIngredientCategory,
 } from "@/features/cadastros/categorias/services/categoria-insumo-service";
 import type { CategoriaInsumo } from "@/features/cadastros/categorias/services/categoria-insumo-service";
+import { CollapsibleBlock } from "@/lib/components/collapsible-block";
 
 type CategoriasInsumoScreenProps = {
   accessToken: string;
@@ -26,6 +27,8 @@ export function CategoriasInsumoScreen({
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -57,6 +60,12 @@ export function CategoriasInsumoScreen({
     setName(category.nome);
     setError("");
     setNotice("");
+    setFormOpen(true);
+    requestAnimationFrame(() => {
+      document
+        .getElementById("category-form-block")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function cancelEditing() {
@@ -120,10 +129,16 @@ export function CategoriasInsumoScreen({
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-3 rounded-2xl border border-hetu-green/10 bg-white p-5 shadow-sm sm:flex-row sm:items-end"
+      <CollapsibleBlock
+        id="category-form-block"
+        title={editingId === null ? "Cadastrar categoria" : "Editar categoria"}
+        open={formOpen}
+        onOpenChange={setFormOpen}
       >
+        <form
+          onSubmit={handleSubmit}
+          className="flex flex-col gap-3 sm:flex-row sm:items-end"
+        >
         <label className="min-w-0 flex-1 text-sm font-medium text-hetu-text">
           {editingId === null ? "Nova categoria" : "Editar categoria"}
           <input
@@ -161,7 +176,8 @@ export function CategoriasInsumoScreen({
             </button>
           )}
         </div>
-      </form>
+        </form>
+      </CollapsibleBlock>
 
       {error && (
         <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -174,10 +190,11 @@ export function CategoriasInsumoScreen({
         </p>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-hetu-green/10 bg-white shadow-sm">
-        <div className="border-b border-hetu-green/10 px-5 py-4">
-          <h3 className="font-medium text-hetu-green">Categorias cadastradas</h3>
-        </div>
+      <CollapsibleBlock
+        title="Categorias cadastradas"
+        open={listOpen}
+        onOpenChange={setListOpen}
+      >
         {loading ? (
           <p className="px-5 py-6 text-sm text-hetu-text/65" role="status">
             Carregando categorias...
@@ -210,7 +227,7 @@ export function CategoriasInsumoScreen({
             })}
           </ul>
         )}
-      </div>
+      </CollapsibleBlock>
     </section>
   );
 }

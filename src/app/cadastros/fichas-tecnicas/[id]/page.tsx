@@ -9,7 +9,7 @@ export default function FichaEditPage({
   return (
     <Suspense fallback={<main className="min-h-dvh bg-hetu-cream" />}>
       {params.then(({ id }) => (
-        <LoginScreen initialView="ficha-edit" initialFichaId={id} />
+        <LoginScreen initialView="produto-form" initialFichaId={id} />
       ))}
     </Suspense>
   );

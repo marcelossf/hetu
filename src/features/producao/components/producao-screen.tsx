@@ -168,7 +168,10 @@ export function ProducaoScreen({ accessToken }: { accessToken: string }) {
                   required
                   inputMode="decimal"
                   value={amount}
-                  onChange={(event) => setAmount(event.currentTarget.value)}
+                  onFocus={(event) => event.currentTarget.select()}
+                  onChange={(event) =>
+                    setAmount(event.currentTarget.value.replace(",", "."))
+                  }
                   className={inputClass}
                 />
               </label>

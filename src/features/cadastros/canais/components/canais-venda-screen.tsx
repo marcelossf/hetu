@@ -8,6 +8,7 @@ import {
   saveCanalVenda,
 } from "@/features/cadastros/canais/services/canal-service";
 import type { CanalVenda } from "@/features/cadastros/canais/services/canal-service";
+import { CollapsibleBlock } from "@/lib/components/collapsible-block";
 
 type ChannelForm = {
   id?: number;
@@ -29,6 +30,8 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
   const [form, setForm] = useState<ChannelForm>(emptyForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -84,11 +87,13 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
     <div className="space-y-6">
       {error && <Notice kind="error" message={error} />}
       {notice && <Notice kind="success" message={notice} />}
-      <section className="rounded-2xl border border-hetu-green/10 bg-white p-5 shadow-sm sm:p-7">
-        <h2 className="font-serif text-xl text-hetu-green">
-          {form.id ? "Editar canal de venda" : "Novo canal de venda"}
-        </h2>
-        <form onSubmit={submit} className="mt-4 grid gap-4 sm:grid-cols-2">
+      <CollapsibleBlock
+        id="sales-channel-form"
+        title={form.id ? "Editar canal de venda" : "Cadastrar canal de venda"}
+        open={formOpen}
+        onOpenChange={setFormOpen}
+      >
+        <form onSubmit={submit} className="grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-medium text-hetu-text">
             Nome
             <input
@@ -157,12 +162,13 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
             )}
           </div>
         </form>
-      </section>
+      </CollapsibleBlock>
 
-      <section className="rounded-2xl border border-hetu-green/10 bg-white p-5 shadow-sm sm:p-7">
-        <h2 className="font-serif text-xl text-hetu-green">
-          Canais cadastrados
-        </h2>
+      <CollapsibleBlock
+        title="Canais cadastrados"
+        open={listOpen}
+        onOpenChange={setListOpen}
+      >
         {loading ? (
           <p className="mt-4 text-sm text-hetu-text/65" role="status">
             Carregando canais...
@@ -188,12 +194,20 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
                 <button
                   type="button"
                   onClick={() =>
+                    {
                     setForm({
                       id: channel.id,
                       nome: channel.nome,
                       endereco: channel.endereco ?? "",
                       ativo: channel.ativo,
-                    })
+                    });
+                    setFormOpen(true);
+                    requestAnimationFrame(() => {
+                      document
+                        .getElementById("sales-channel-form")
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                    }
                   }
                   className="inline-flex min-h-10 items-center gap-2 rounded-lg px-3 text-sm text-hetu-green hover:bg-hetu-cream"
                 >
@@ -204,7 +218,7 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
             ))}
           </ul>
         )}
-      </section>
+      </CollapsibleBlock>
     </div>
   );
 }

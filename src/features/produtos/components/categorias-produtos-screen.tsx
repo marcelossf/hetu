@@ -28,6 +28,8 @@ export function CategoriasProdutosScreen({ accessToken }: Props) {
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
@@ -91,6 +93,19 @@ export function CategoriasProdutosScreen({ accessToken }: Props) {
     }
   }
 
+  function startEditing(id: number, name: string) {
+    setEditingCategoryId(id);
+    setCategoryName(name);
+    setFormOpen(true);
+    setError("");
+    setNotice("");
+    requestAnimationFrame(() => {
+      document
+        .getElementById("product-category-form")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
   if (loading) {
     return (
       <div className="text-sm text-hetu-text/65">Carregando categorias...</div>
@@ -111,8 +126,10 @@ export function CategoriasProdutosScreen({ accessToken }: Props) {
       )}
 
       <CollapsibleBlock
-        title="Criar nova categoria"
-        defaultOpen={!editingCategoryId}
+        id="product-category-form"
+        title={editingCategoryId ? "Editar categoria" : "Cadastrar categoria"}
+        open={formOpen}
+        onOpenChange={setFormOpen}
       >
         <form onSubmit={submitCategory} className="space-y-4">
           <input
@@ -149,7 +166,11 @@ export function CategoriasProdutosScreen({ accessToken }: Props) {
         </form>
       </CollapsibleBlock>
 
-      <CollapsibleBlock title="Categorias cadastradas" defaultOpen={true}>
+      <CollapsibleBlock
+        title="Categorias cadastradas"
+        open={listOpen}
+        onOpenChange={setListOpen}
+      >
         <div className="space-y-2">
           {catalog.categorias.length === 0 ? (
             <p className="text-sm text-hetu-text/65">Nenhuma categoria criada.</p>
@@ -162,10 +183,7 @@ export function CategoriasProdutosScreen({ accessToken }: Props) {
                 <span className="text-sm font-medium text-hetu-text">{cat.nome}</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setEditingCategoryId(cat.id);
-                    setCategoryName(cat.nome);
-                  }}
+                  onClick={() => startEditing(cat.id, cat.nome)}
                   className="rounded px-2 py-1 text-xs text-hetu-green hover:bg-hetu-gold/20 transition"
                 >
                   Editar

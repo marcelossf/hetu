@@ -19,6 +19,7 @@ import type {
   Unidade,
 } from "@/features/cadastros/insumos/services/insumo-service";
 import type { CategoriaInsumo } from "@/features/cadastros/categorias/services/categoria-insumo-service";
+import { CollapsibleBlock } from "@/lib/components/collapsible-block";
 
 type InsumosScreenProps = {
   accessToken: string;
@@ -150,7 +151,10 @@ function InsumoFormFields({
           type="text"
           inputMode="decimal"
           value={form.custo}
-          onChange={(event) => onChange("custo", event.currentTarget.value)}
+          onFocus={(event) => event.currentTarget.select()}
+          onChange={(event) =>
+            onChange("custo", event.currentTarget.value.replace(",", "."))
+          }
           required
           disabled={editing}
           className="mt-2 min-h-11 w-full rounded-lg border border-hetu-green/20 bg-white px-3 text-sm outline-none focus:border-hetu-green focus:ring-2 focus:ring-hetu-green/15 disabled:bg-hetu-cream"
@@ -163,7 +167,10 @@ function InsumoFormFields({
           type="text"
           inputMode="decimal"
           value={form.estoque}
-          onChange={(event) => onChange("estoque", event.currentTarget.value)}
+          onFocus={(event) => event.currentTarget.select()}
+          onChange={(event) =>
+            onChange("estoque", event.currentTarget.value.replace(",", "."))
+          }
           required
           className="mt-2 min-h-11 w-full rounded-lg border border-hetu-green/20 bg-white px-3 text-sm outline-none focus:border-hetu-green focus:ring-2 focus:ring-hetu-green/15"
         />
@@ -203,6 +210,8 @@ export function InsumosScreen({
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [formOpen, setFormOpen] = useState(false);
+  const [listOpen, setListOpen] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const nextDraftId = useRef(1);
@@ -282,6 +291,12 @@ export function InsumosScreen({
     });
     setError("");
     setNotice("");
+    setFormOpen(true);
+    requestAnimationFrame(() => {
+      document
+        .getElementById("insumo-form-block")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
   }
 
   function cancelEditing() {
@@ -381,14 +396,14 @@ export function InsumosScreen({
         </p>
       </div>
 
-      <form
-        onSubmit={handleSubmit}
-        className="space-y-4 rounded-2xl border border-hetu-green/10 bg-white p-5 shadow-sm"
+      <CollapsibleBlock
+        id="insumo-form-block"
+        title={editing ? "Editar insumo" : "Cadastrar insumos"}
+        open={formOpen}
+        onOpenChange={setFormOpen}
       >
-        <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-center">
-          <h3 className="font-medium text-hetu-green">
-            {editing ? "Editar insumo" : "Cadastrar insumos"}
-          </h3>
+        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="flex justify-end">
           {editing ? (
             <p className="text-xs text-hetu-text/60">
               Nome e custo inicial são preservados; o custo é atualizado pelo
@@ -507,7 +522,8 @@ export function InsumosScreen({
             </button>
           )}
         </div>
-      </form>
+        </form>
+      </CollapsibleBlock>
 
       {error && (
         <p
@@ -526,9 +542,13 @@ export function InsumosScreen({
         </p>
       )}
 
-      <div className="overflow-hidden rounded-2xl border border-hetu-green/10 bg-white shadow-sm">
-        <div className="flex flex-col gap-3 border-b border-hetu-green/10 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <h3 className="font-medium text-hetu-green">Insumos cadastrados</h3>
+      <CollapsibleBlock
+        title="Insumos cadastrados"
+        open={listOpen}
+        onOpenChange={setListOpen}
+      >
+        <div className="overflow-hidden">
+        <div className="flex flex-col gap-3 pb-4 sm:flex-row sm:items-center sm:justify-between">
           <label className="text-sm text-hetu-text/70">
             Buscar
             <input
@@ -539,7 +559,7 @@ export function InsumosScreen({
               className="mt-1 min-h-10 w-full rounded-lg border border-hetu-green/20 px-3 text-sm outline-none focus:border-hetu-green sm:w-64"
             />
           </label>
-        </div>
+          </div>
         {loading ? (
           <p className="px-5 py-6 text-sm text-hetu-text/65" role="status">
             Carregando insumos...
@@ -615,7 +635,8 @@ export function InsumosScreen({
             </table>
           </div>
         )}
-      </div>
+        </div>
+      </CollapsibleBlock>
     </section>
   );
 }

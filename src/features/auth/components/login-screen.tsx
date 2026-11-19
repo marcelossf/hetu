@@ -42,11 +42,10 @@ import { CategoriasInsumoScreen } from "@/features/cadastros/categorias/componen
 import { InsumosScreen } from "@/features/cadastros/insumos/components/insumos-screen";
 import { ProducaoScreen } from "@/features/producao/components/producao-screen";
 import { ProdutosScreen } from "@/features/produtos/components/produtos-screen";
-import { FichasTecnicasScreen } from "@/features/produtos/components/fichas-tecnicas-screen";
+import { ProdutoFormScreen } from "@/features/produtos/components/produto-form-screen";
 import { CategoriasProdutosScreen } from "@/features/produtos/components/categorias-produtos-screen";
 import { CanaisVendaScreen } from "@/features/cadastros/canais/components/canais-venda-screen";
 import { VendasScreen } from "@/features/vendas/components/vendas-screen";
-import { usePullToRefresh } from "@/lib/hooks/use-pull-to-refresh";
 
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
@@ -106,15 +105,15 @@ export type AppView =
   | "categorias-insumo"
   | "canais"
   | "produtos"
-  | "fichas-tecnicas"
+  | "produto-form"
   | "categorias-produtos"
-  | "ficha-edit"
   | "producao"
   | "vendas"
   | "settings";
 
 export function LoginScreen({
   initialView = "home",
+  initialFichaId,
 }: {
   initialView?: AppView;
   initialFichaId?: string;
@@ -141,16 +140,6 @@ export function LoginScreen({
   const [installPrompt, setInstallPrompt] =
     useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState<boolean | null>(null);
-  const [isPullToRefresh, setIsPullToRefresh] = useState(false);
-
-  // Prevent biometric prompt on pull-to-refresh
-  usePullToRefresh({
-    onPullToRefresh: () => {
-      setIsPullToRefresh(true);
-      setTimeout(() => setIsPullToRefresh(false), 1000);
-    },
-  });
-
   useEffect(() => {
     let active = true;
     let unsubscribe: (() => void) | undefined;
@@ -318,14 +307,14 @@ export function LoginScreen({
   }, [pageNonce, session]);
 
   useEffect(() => {
-    if (gate !== "locked" || !session || !supportsWebAuthn || isPullToRefresh) return;
+    if (gate !== "locked" || !session || !supportsWebAuthn) return;
 
     const attemptKey = `${session.user.id}:${pageNonce}`;
     if (autoUnlockAttempted.current === attemptKey) return;
 
     autoUnlockAttempted.current = attemptKey;
     void handleUnlock(true);
-  }, [gate, handleUnlock, pageNonce, session, supportsWebAuthn, isPullToRefresh]);
+  }, [gate, handleUnlock, pageNonce, session, supportsWebAuthn]);
 
   async function handleSignOut(reAuthenticate = false) {
     setBusyAction(reAuthenticate ? "google" : "sign-out");
@@ -416,6 +405,7 @@ export function LoginScreen({
         error={visibleError}
         isStandalone={isStandalone}
         initialView={initialView}
+        initialFichaId={initialFichaId}
         onBiometricPreferenceChange={handleBiometricPreferenceChange}
         onSignOut={() => handleSignOut()}
         onClearError={() => {
@@ -665,6 +655,7 @@ type AuthenticatedAppProps = {
   error: string;
   isStandalone: boolean | null;
   initialView: AppView;
+  initialFichaId?: string;
   onBiometricPreferenceChange: (enabled: boolean) => void;
   onSignOut: () => void;
   onClearError: () => void;
@@ -680,6 +671,7 @@ function AuthenticatedApp({
   error,
   isStandalone,
   initialView,
+  initialFichaId,
   onBiometricPreferenceChange,
   onSignOut,
   onClearError,
@@ -799,22 +791,11 @@ function AuthenticatedApp({
 
             <SidebarGroup label="Produtos">
               <SidebarButton
-                label="Produtos"
+                label="Produtos e fichas técnicas"
                 expanded={true}
                 active={activeView === "produtos"}
                 onClick={() => {
                   setActiveView("produtos");
-                  setSidebarExpanded(false);
-                }}
-              >
-                <Boxes aria-hidden="true" className="h-5 w-5 shrink-0" />
-              </SidebarButton>
-              <SidebarButton
-                label="Fichas técnicas"
-                expanded={true}
-                active={activeView === "fichas-tecnicas"}
-                onClick={() => {
-                  setActiveView("fichas-tecnicas");
                   setSidebarExpanded(false);
                 }}
               >
@@ -903,13 +884,13 @@ function AuthenticatedApp({
                   : activeView === "canais"
                     ? "Canais de venda"
                     : activeView === "produtos"
-                      ? "Produtos"
-                      : activeView === "fichas-tecnicas"
-                        ? "Fichas técnicas"
-                        : activeView === "categorias-produtos"
+                      ? "Produtos e fichas técnicas"
+                      : activeView === "categorias-produtos"
                           ? "Categorias de produtos"
-                          : activeView === "ficha-edit"
-                            ? "Editar ficha técnica"
+                          : activeView === "produto-form"
+                            ? initialFichaId
+                              ? "Editar produto"
+                              : "Novo produto"
                             : activeView === "producao"
                               ? "Produção"
                               : activeView === "vendas"
@@ -965,14 +946,13 @@ function AuthenticatedApp({
           <CanaisVendaScreen accessToken={accessToken} />
         ) : activeView === "produtos" ? (
           <ProdutosScreen accessToken={accessToken} />
-        ) : activeView === "fichas-tecnicas" ? (
-          <FichasTecnicasScreen accessToken={accessToken} />
         ) : activeView === "categorias-produtos" ? (
           <CategoriasProdutosScreen accessToken={accessToken} />
-        ) : activeView === "ficha-edit" ? (
-          <div className="text-sm text-hetu-text/65">
-            Página de edição de ficha técnica. Implementar com rota dinâmica.
-          </div>
+        ) : activeView === "produto-form" ? (
+          <ProdutoFormScreen
+            accessToken={accessToken}
+            productId={initialFichaId}
+          />
         ) : activeView === "producao" ? (
           <ProducaoScreen accessToken={accessToken} />
         ) : activeView === "vendas" ? (

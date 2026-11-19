@@ -379,11 +379,12 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
                     <input
                       inputMode="decimal"
                       value={line.quantidade}
+                      onFocus={(event) => event.currentTarget.select()}
                       onChange={(event) =>
                         updateItem(
                           index,
                           "quantidade",
-                          event.currentTarget.value,
+                          event.currentTarget.value.replace(",", "."),
                         )
                       }
                       aria-label={`Quantidade do produto ${index + 1}`}
@@ -428,8 +429,9 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
                 <input
                   inputMode="decimal"
                   value={discountPercent}
+                  onFocus={(event) => event.currentTarget.select()}
                   onChange={(event) =>
-                    setDiscountPercent(event.currentTarget.value)
+                    setDiscountPercent(event.currentTarget.value.replace(",", "."))
                   }
                   className={inputClass}
                 />
@@ -508,11 +510,12 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
                           ? total.toFixed(2).replace(".", ",")
                           : payment.valor
                       }
+                      onFocus={(event) => event.currentTarget.select()}
                       onChange={(event) =>
                         updatePayment(
                           index,
                           "valor",
-                          event.currentTarget.value,
+                          event.currentTarget.value.replace(",", "."),
                         )
                       }
                       aria-label={`Valor do pagamento ${index + 1}`}
