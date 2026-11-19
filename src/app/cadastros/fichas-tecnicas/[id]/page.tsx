@@ -1,10 +1,16 @@
+import { Suspense } from "react";
 import { LoginScreen } from "@/features/auth/components/login-screen";
 
-export default async function FichaEditPage({
+export default function FichaEditPage({
   params,
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
-  return <LoginScreen initialView="ficha-edit" initialFichaId={id} />;
+  return (
+    <Suspense fallback={<main className="min-h-dvh bg-hetu-cream" />}>
+      {params.then(({ id }) => (
+        <LoginScreen initialView="ficha-edit" initialFichaId={id} />
+      ))}
+    </Suspense>
+  );
 }
