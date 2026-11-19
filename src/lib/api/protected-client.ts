@@ -1,7 +1,7 @@
 import { getUnlockedApiHeaders } from "@/features/auth/services/auth-service";
 
 type ProtectedRequestOptions = {
-  method?: "GET" | "POST" | "PATCH";
+  method?: "GET" | "POST" | "PATCH" | "DELETE";
   body?: unknown;
 };
 

@@ -30,6 +30,20 @@ const invalidInputMessages: Record<string, string> = {
     "A soma dos pagamentos deve corresponder ao total da venda.",
   SALE_ALREADY_CANCELLED: "Esta venda já foi cancelada.",
   SALE_PRODUCT_NOT_FOUND: "Um produto da venda não foi encontrado.",
+  INVALID_PURCHASE_DATA: "Informe os dados válidos da compra.",
+  INVALID_PURCHASE_ITEM_COUNT: "A compra deve ter entre 1 e 100 insumos.",
+  INVALID_PURCHASE_ITEM: "Confira as quantidades e valores da compra.",
+  DUPLICATE_PURCHASE_SUPPLY: "Remova insumos repetidos da compra.",
+  SUPPLIER_NOT_FOUND_OR_INACTIVE: "O fornecedor não existe ou está inativo.",
+  SUPPLY_NOT_FOUND_OR_INACTIVE: "Um insumo não existe ou está inativo.",
+  INVALID_RESULTING_SUPPLY_STOCK: "A compra ultrapassa o estoque permitido.",
+  INVALID_RESULTING_SUPPLY_COST: "A operação resultaria em custo inválido.",
+  INVALID_RECIPE_COST: "A operação resultaria em custo de ficha inválido.",
+  INVALID_PURCHASE_CANCELLATION: "Informe um motivo válido para o cancelamento.",
+  PURCHASE_ALREADY_CANCELLED: "Esta compra já foi cancelada.",
+  INSUFFICIENT_SUPPLY_STOCK_FOR_CANCELLATION:
+    "A compra não pode ser cancelada porque seu estoque já foi consumido.",
+  PURCHASE_SUPPLY_NOT_FOUND: "Um insumo da compra não foi encontrado.",
 };
 
 export function rpcErrorResponse(error: RpcError): Response | null {
@@ -63,6 +77,7 @@ export function rpcErrorResponse(error: RpcError): Response | null {
   const knownNotFound = [
     "PRODUCT_NOT_FOUND",
     "SALE_NOT_FOUND",
+    "PURCHASE_NOT_FOUND",
   ].some((code) => error.message.includes(code));
   if (knownNotFound || error.code === "P0002") {
     return Response.json({ error: "O registro solicitado não foi encontrado." }, {
@@ -74,7 +89,9 @@ export function rpcErrorResponse(error: RpcError): Response | null {
     if (error.message.includes(code)) {
       const conflict =
         code === "INSUFFICIENT_PRODUCT_STOCK" ||
-        code === "SALE_ALREADY_CANCELLED";
+        code === "SALE_ALREADY_CANCELLED" ||
+        code === "PURCHASE_ALREADY_CANCELLED" ||
+        code === "INSUFFICIENT_SUPPLY_STOCK_FOR_CANCELLATION";
       return Response.json(
         { error: message },
         { status: conflict ? 409 : 400 },

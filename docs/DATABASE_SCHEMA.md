@@ -38,10 +38,17 @@ atribui as categorias existentes à conta Supabase ativa mais antiga e as copia
 para as demais contas ativas, preservando os IDs originais para a primeira conta.
 
 ### `db_fornecedores`
-- `id_fornecedor` (INT, PK)
+- `id_fornecedor` (INT, PK, gerado por identity)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `nome` (TEXT, NOT NULL)
 - `endereco` (TEXT)
 - `ativo` (TEXT, DEFAULT 'Sim')
+- `criado_em` (TIMESTAMPTZ, DEFAULT NOW())
+- `atualizado_em` (TIMESTAMPTZ, DEFAULT NOW())
+
+Fornecedores são isolados por usuário por RLS. O nome é único por usuário sem
+distinção entre maiúsculas/minúsculas. A exclusão da API é lógica (`ativo =
+'Não'`), preservando fornecedores referenciados pelo histórico de compras.
 
 ### `db_canais_vendas`
 - `id` (INT, PK, gerado por identity)
@@ -143,6 +150,7 @@ possuem seus próprios históricos de movimentação.
 
 ### `db_fichas_historico_custos`
 - `id_historico` (INT, PK)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
 - `data_alteracao` (TIMESTAMP WITH TIME ZONE)
 - `id_ficha` (INT, FK -> `db_fichas(id_ficha)`)
 - `id_insumo_alterado` (INT)
@@ -151,20 +159,44 @@ possuem seus próprios históricos de movimentação.
 - `impacto_diferenca_brl` (NUMERIC(10,2))
 - `novo_custo_total_ficha` (NUMERIC(10,2))
 - `id_compra_origem` (INT)
+- `id_lote_compra` (UUID)
+- `tipo_movimento` (TEXT, `compra` ou `cancelamento`)
 
 ---
 
 ## 3. Grupo 3: Transações, Compras, Produção e Vendas
 
 ### `db_compras_historico`
-- `id_compra` (INT, PK)
+- `id_compra` (INT, PK, gerado por identity)
+- `user_id` (UUID, FK -> `auth.users(id)` ON DELETE CASCADE)
+- `id_lote` (UUID, identifica o lote com um fornecedor e uma data)
 - `data_compra` (TIMESTAMP WITH TIME ZONE)
-- `id_insumo` (INT, FK -> `db_insumos(id_insumo)`)
-- `id_fornecedor` (INT, FK -> `db_fornecedores(id_fornecedor)`)
-- `quantidade` (NUMERIC(10,2), DEFAULT 0.00)
+- `id_insumo` (INT, FK composta -> `db_insumos(user_id, id_insumo)`)
+- `id_fornecedor` (INT, FK composta -> `db_fornecedores(user_id, id_fornecedor)`)
+- `quantidade` (NUMERIC(12,4), positiva na compra e negativa no estorno)
 - `unidade_compra` (TEXT)
 - `valor_total` (NUMERIC(10,2), DEFAULT 0.00)
 - `valor_unitario` (NUMERIC(10,2), DEFAULT 0.00)
+- `tipo_movimento` (TEXT, `compra` ou `cancelamento`)
+- `status` (TEXT, `registrada`, `cancelada` ou `compensacao`)
+- `id_compra_compensada` (INT, único por usuário quando informado)
+- `motivo_cancelamento` (TEXT)
+- `registrado_em` (TIMESTAMPTZ, DEFAULT NOW())
+- `cancelado_em` (TIMESTAMPTZ)
+- `cancelado_por` (UUID, FK -> `auth.users(id)` ON DELETE SET NULL)
+
+Compras são registradas somente com fornecedor e insumo ativos já existentes.
+Um lote possui um único fornecedor/data e contém de 1 a 100 insumos. A função
+`register_purchase_batch` trava os insumos, atualiza estoque e custo médio
+ponderado, grava o histórico e recalcula todas as fichas afetadas em uma única
+transação. A função `cancel_purchase_batch` trava o lote inteiro, impede
+cancelamento duplicado, bloqueia saldo ou custo resultantes negativos e
+preserva a auditoria por movimentos compensatórios. Após cada alteração de
+custo, `db_fichas_historico_custos` registra o impacto granular por ficha e
+insumo. A migração
+`supabase/migrations/20261119080000_create_purchasing_foundation.sql` cria a
+fundação e as políticas RLS; o usuário autenticado recebe somente leitura das
+movimentações e executa mutações pelas funções protegidas.
 
 ### `db_vendas_cabecalho`
 - `id` (INT, PK)

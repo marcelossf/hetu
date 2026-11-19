@@ -24,6 +24,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      db_fornecedores: {
+        Row: {
+          id_fornecedor: number;
+          user_id: string;
+          nome: string;
+          endereco: string | null;
+          ativo: "Sim" | "Não";
+          criado_em: string;
+          atualizado_em: string;
+        };
+        Insert: {
+          id_fornecedor?: number;
+          user_id?: string;
+          nome: string;
+          endereco?: string | null;
+          ativo?: "Sim" | "Não";
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Update: {
+          id_fornecedor?: number;
+          user_id?: string;
+          nome?: string;
+          endereco?: string | null;
+          ativo?: "Sim" | "Não";
+          criado_em?: string;
+          atualizado_em?: string;
+        };
+        Relationships: [];
+      };
       db_categoria_insumo: {
         Row: {
           id: number;
@@ -186,6 +216,111 @@ export type Database = {
           nome?: string;
           endereco?: string | null;
           ativo?: "Sim" | "Não";
+        };
+        Relationships: [];
+      };
+      db_compras_historico: {
+        Row: {
+          id_compra: number;
+          user_id: string;
+          id_lote: string;
+          data_compra: string;
+          id_insumo: number;
+          id_fornecedor: number;
+          quantidade: number;
+          unidade_compra: string;
+          valor_total: number;
+          valor_unitario: number;
+          tipo_movimento: "compra" | "cancelamento";
+          status: "registrada" | "cancelada" | "compensacao";
+          id_compra_compensada: number | null;
+          motivo_cancelamento: string | null;
+          registrado_em: string;
+          cancelado_em: string | null;
+          cancelado_por: string | null;
+        };
+        Insert: {
+          id_compra?: number;
+          user_id?: string;
+          id_lote?: string;
+          data_compra?: string;
+          id_insumo: number;
+          id_fornecedor: number;
+          quantidade: number;
+          unidade_compra: string;
+          valor_total: number;
+          valor_unitario: number;
+          tipo_movimento?: "compra" | "cancelamento";
+          status?: "registrada" | "cancelada" | "compensacao";
+          id_compra_compensada?: number | null;
+          motivo_cancelamento?: string | null;
+          registrado_em?: string;
+          cancelado_em?: string | null;
+          cancelado_por?: string | null;
+        };
+        Update: {
+          id_compra?: number;
+          user_id?: string;
+          id_lote?: string;
+          data_compra?: string;
+          id_insumo?: number;
+          id_fornecedor?: number;
+          quantidade?: number;
+          unidade_compra?: string;
+          valor_total?: number;
+          valor_unitario?: number;
+          tipo_movimento?: "compra" | "cancelamento";
+          status?: "registrada" | "cancelada" | "compensacao";
+          id_compra_compensada?: number | null;
+          motivo_cancelamento?: string | null;
+          registrado_em?: string;
+          cancelado_em?: string | null;
+          cancelado_por?: string | null;
+        };
+        Relationships: [];
+      };
+      db_fichas_historico_custos: {
+        Row: {
+          id_historico: number;
+          user_id: string;
+          data_alteracao: string;
+          id_ficha: number;
+          id_insumo_alterado: number;
+          preco_insumo_anterior: number;
+          preco_insumo_novo: number;
+          impacto_diferenca_brl: number;
+          novo_custo_total_ficha: number;
+          id_compra_origem: number | null;
+          id_lote_compra: string;
+          tipo_movimento: "compra" | "cancelamento";
+        };
+        Insert: {
+          id_historico?: number;
+          user_id?: string;
+          data_alteracao?: string;
+          id_ficha: number;
+          id_insumo_alterado: number;
+          preco_insumo_anterior: number;
+          preco_insumo_novo: number;
+          impacto_diferenca_brl: number;
+          novo_custo_total_ficha: number;
+          id_compra_origem?: number | null;
+          id_lote_compra: string;
+          tipo_movimento?: "compra" | "cancelamento";
+        };
+        Update: {
+          id_historico?: number;
+          user_id?: string;
+          data_alteracao?: string;
+          id_ficha?: number;
+          id_insumo_alterado?: number;
+          preco_insumo_anterior?: number;
+          preco_insumo_novo?: number;
+          impacto_diferenca_brl?: number;
+          novo_custo_total_ficha?: number;
+          id_compra_origem?: number | null;
+          id_lote_compra?: string;
+          tipo_movimento?: "compra" | "cancelamento";
         };
         Relationships: [];
       };
@@ -534,6 +669,21 @@ export type Database = {
       cancel_sale: {
         Args: {
           p_id_venda: number;
+        };
+        Returns: boolean;
+      };
+      register_purchase_batch: {
+        Args: {
+          p_id_fornecedor: number;
+          p_data_compra: string;
+          p_itens: Json;
+        };
+        Returns: string;
+      };
+      cancel_purchase_batch: {
+        Args: {
+          p_id_lote: string;
+          p_motivo: string;
         };
         Returns: boolean;
       };

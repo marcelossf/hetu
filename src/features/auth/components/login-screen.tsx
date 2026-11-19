@@ -12,6 +12,7 @@ import type { Session } from "@supabase/supabase-js";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
 import {
   Boxes,
+  ChartNoAxesCombined,
   Factory,
   Home,
   LogOut,
@@ -20,6 +21,7 @@ import {
   Settings,
   ShoppingCart,
   Store,
+  Truck,
   Tags,
   X,
 } from "lucide-react";
@@ -43,6 +45,13 @@ import { InsumosScreen } from "@/features/cadastros/insumos/components/insumos-s
 import { ProducaoScreen } from "@/features/producao/components/producao-screen";
 import { ProdutosScreen } from "@/features/produtos/components/produtos-screen";
 import { ProdutoFormScreen } from "@/features/produtos/components/produto-form-screen";
+import { FornecedoresScreen } from "@/features/cadastros/fornecedores/components/fornecedores-screen";
+import { ComprasScreen } from "@/features/compras/components/compras-screen";
+import { RelatorioVendasScreen } from "@/features/relatorios/components/relatorio-vendas-screen";
+import {
+  RelatorioFichaScreen,
+  RelatorioInsumoScreen,
+} from "@/features/relatorios/components/relatorios-custos-screen";
 import { CategoriasProdutosScreen } from "@/features/produtos/components/categorias-produtos-screen";
 import { CanaisVendaScreen } from "@/features/cadastros/canais/components/canais-venda-screen";
 import { VendasScreen } from "@/features/vendas/components/vendas-screen";
@@ -104,11 +113,16 @@ export type AppView =
   | "insumos"
   | "categorias-insumo"
   | "canais"
+  | "fornecedores"
+  | "compras"
   | "produtos"
   | "produto-form"
   | "categorias-produtos"
   | "producao"
   | "vendas"
+  | "relatorio-fichas"
+  | "relatorio-insumos"
+  | "relatorio-vendas"
   | "settings";
 
 export function LoginScreen({
@@ -787,6 +801,17 @@ function AuthenticatedApp({
               >
                 <Store aria-hidden="true" className="h-5 w-5 shrink-0" />
               </SidebarButton>
+              <SidebarButton
+                label="Fornecedores"
+                expanded={true}
+                active={activeView === "fornecedores"}
+                onClick={() => {
+                  setActiveView("fornecedores");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Truck aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
             </SidebarGroup>
 
             <SidebarGroup label="Produtos">
@@ -816,6 +841,17 @@ function AuthenticatedApp({
 
             <SidebarGroup label="Operações">
               <SidebarButton
+                label="Compras"
+                expanded={true}
+                active={activeView === "compras"}
+                onClick={() => {
+                  setActiveView("compras");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <Truck aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+              <SidebarButton
                 label="Produção"
                 expanded={true}
                 active={activeView === "producao"}
@@ -836,6 +872,42 @@ function AuthenticatedApp({
                 }}
               >
                 <ShoppingCart aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+            </SidebarGroup>
+
+            <SidebarGroup label="Relatórios">
+              <SidebarButton
+                label="Variação de ficha"
+                expanded={true}
+                active={activeView === "relatorio-fichas"}
+                onClick={() => {
+                  setActiveView("relatorio-fichas");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <ChartNoAxesCombined aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+              <SidebarButton
+                label="Variação de insumo"
+                expanded={true}
+                active={activeView === "relatorio-insumos"}
+                onClick={() => {
+                  setActiveView("relatorio-insumos");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <ChartNoAxesCombined aria-hidden="true" className="h-5 w-5 shrink-0" />
+              </SidebarButton>
+              <SidebarButton
+                label="Vendas"
+                expanded={true}
+                active={activeView === "relatorio-vendas"}
+                onClick={() => {
+                  setActiveView("relatorio-vendas");
+                  setSidebarExpanded(false);
+                }}
+              >
+                <ChartNoAxesCombined aria-hidden="true" className="h-5 w-5 shrink-0" />
               </SidebarButton>
             </SidebarGroup>
 
@@ -886,12 +958,22 @@ function AuthenticatedApp({
                     : activeView === "produtos"
                       ? "Produtos e fichas técnicas"
                       : activeView === "categorias-produtos"
-                          ? "Categorias de produtos"
-                          : activeView === "produto-form"
-                            ? initialFichaId
-                              ? "Editar produto"
-                              : "Novo produto"
-                            : activeView === "producao"
+                        ? "Categorias de produtos"
+                        : activeView === "produto-form"
+                          ? initialFichaId
+                            ? "Editar produto"
+                            : "Novo produto"
+                          : activeView === "fornecedores"
+                            ? "Fornecedores"
+                            : activeView === "compras"
+                              ? "Compras"
+                              : activeView === "relatorio-fichas"
+                                ? "Relatório de ficha"
+                                : activeView === "relatorio-insumos"
+                                  ? "Relatório de insumo"
+                                  : activeView === "relatorio-vendas"
+                                    ? "Relatório de vendas"
+                                    : activeView === "producao"
                               ? "Produção"
                               : activeView === "vendas"
                                 ? "Vendas"
@@ -944,6 +1026,8 @@ function AuthenticatedApp({
           <CategoriasInsumoScreen accessToken={accessToken} />
         ) : activeView === "canais" ? (
           <CanaisVendaScreen accessToken={accessToken} />
+        ) : activeView === "fornecedores" ? (
+          <FornecedoresScreen accessToken={accessToken} />
         ) : activeView === "produtos" ? (
           <ProdutosScreen accessToken={accessToken} />
         ) : activeView === "categorias-produtos" ? (
@@ -953,10 +1037,18 @@ function AuthenticatedApp({
             accessToken={accessToken}
             productId={initialFichaId}
           />
+        ) : activeView === "compras" ? (
+          <ComprasScreen accessToken={accessToken} />
         ) : activeView === "producao" ? (
           <ProducaoScreen accessToken={accessToken} />
         ) : activeView === "vendas" ? (
           <VendasScreen accessToken={accessToken} />
+        ) : activeView === "relatorio-fichas" ? (
+          <RelatorioFichaScreen accessToken={accessToken} />
+        ) : activeView === "relatorio-insumos" ? (
+          <RelatorioInsumoScreen accessToken={accessToken} />
+        ) : activeView === "relatorio-vendas" ? (
+          <RelatorioVendasScreen accessToken={accessToken} />
         ) : (
           <section className="max-w-3xl rounded-2xl border border-hetu-green/10 bg-white p-6 shadow-sm sm:p-8">
             <h2 className="font-serif text-xl text-hetu-green">
