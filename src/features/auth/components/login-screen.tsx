@@ -100,10 +100,23 @@ function createPageNonceState(reuse: boolean): PageNonceState {
   }
 }
 
+export type AppView =
+  | "home"
+  | "insumos"
+  | "categorias-insumo"
+  | "canais"
+  | "produtos"
+  | "fichas-tecnicas"
+  | "categorias-produtos"
+  | "ficha-edit"
+  | "producao"
+  | "vendas"
+  | "settings";
+
 export function LoginScreen({
-  initialView = "home", // eslint-disable-line @typescript-eslint/no-unused-vars
+  initialView = "home",
 }: {
-  initialView?: string;
+  initialView?: AppView;
   initialFichaId?: string;
 } = {}) {
   const [session, setSession] = useState<Session | null>(null);
@@ -402,6 +415,7 @@ export function LoginScreen({
         busy={busyAction !== null}
         error={visibleError}
         isStandalone={isStandalone}
+        initialView={initialView}
         onBiometricPreferenceChange={handleBiometricPreferenceChange}
         onSignOut={() => handleSignOut()}
         onClearError={() => {
@@ -650,6 +664,7 @@ type AuthenticatedAppProps = {
   busy: boolean;
   error: string;
   isStandalone: boolean | null;
+  initialView: AppView;
   onBiometricPreferenceChange: (enabled: boolean) => void;
   onSignOut: () => void;
   onClearError: () => void;
@@ -664,24 +679,13 @@ function AuthenticatedApp({
   busy,
   error,
   isStandalone,
+  initialView,
   onBiometricPreferenceChange,
   onSignOut,
   onClearError,
 }: AuthenticatedAppProps) {
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
-  const [activeView, setActiveView] = useState<
-    | "home"
-    | "insumos"
-    | "categorias-insumo"
-    | "canais"
-    | "produtos"
-    | "fichas-tecnicas"
-    | "categorias-produtos"
-    | "ficha-edit"
-    | "producao"
-    | "vendas"
-    | "settings"
-  >(initialView || "home");
+  const [activeView, setActiveView] = useState<AppView>(initialView);
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   function startSidebarSwipe(event: ReactPointerEvent<HTMLElement>) {

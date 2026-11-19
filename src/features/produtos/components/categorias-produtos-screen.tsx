@@ -69,7 +69,7 @@ export function CategoriasProdutosScreen({ accessToken }: Props) {
 
     try {
       await saveProdutoCategoria(accessToken, {
-        id_categoria: editingCategoryId,
+        id: editingCategoryId ?? 0,
         nome: categoryName,
       });
       setCategoryName("");
@@ -156,14 +156,14 @@ export function CategoriasProdutosScreen({ accessToken }: Props) {
           ) : (
             catalog.categorias.map((cat) => (
               <div
-                key={cat.id_categoria}
+                key={cat.id}
                 className="flex items-center justify-between gap-3 rounded-lg bg-hetu-cream/40 p-3 hover:bg-hetu-cream/60 transition"
               >
                 <span className="text-sm font-medium text-hetu-text">{cat.nome}</span>
                 <button
                   type="button"
                   onClick={() => {
-                    setEditingCategoryId(cat.id_categoria);
+                    setEditingCategoryId(cat.id);
                     setCategoryName(cat.nome);
                   }}
                   className="rounded px-2 py-1 text-xs text-hetu-green hover:bg-hetu-gold/20 transition"
