@@ -93,9 +93,10 @@ copiadas. Após executar, confira os totais e vínculos no aplicativo. As contas
 continuam independentes; uma nova execução sobrescreverá novamente os dados e
 históricos indicados acima.
 
-Na lista de produtos, o botão **Copiar produto** abre uma nova ficha preenchida
-para revisão. Ela só é criada ao salvar, começa com estoque zero e não copia
-histórico. Insumos inativos precisam ser substituídos antes de salvar.
+Na lista de produtos, é possível buscar pelo nome do produto ou de um insumo.
+O botão **Copiar produto** abre uma nova ficha preenchida para revisão. Ela só
+é criada ao salvar, começa com estoque zero e não copia histórico. Insumos
+inativos precisam ser substituídos antes de salvar.
 
 ## Organização
 

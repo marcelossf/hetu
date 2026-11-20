@@ -2,7 +2,7 @@
 
 import { Copy, Pencil, Plus, Save, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import {
   adjustProdutoStock,
@@ -33,6 +33,7 @@ export function ProdutosScreen({ accessToken }: Props) {
   const [adjusting, setAdjusting] = useState<Produto | null>(null);
   const [stockTarget, setStockTarget] = useState("");
   const [stockReason, setStockReason] = useState("");
+  const [search, setSearch] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -67,6 +68,18 @@ export function ProdutosScreen({ accessToken }: Props) {
       active = false;
     };
   }, [accessToken]);
+
+  const filteredProducts = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase("pt-BR");
+    if (!term) return catalog.produtos;
+    return catalog.produtos.filter(
+      (product) =>
+        product.nome_receita.toLocaleLowerCase("pt-BR").includes(term) ||
+        product.itens.some((item) =>
+          item.insumo?.nome.toLocaleLowerCase("pt-BR").includes(term),
+        ),
+    );
+  }, [catalog.produtos, search]);
 
   function startAdjustment(product: Produto) {
     setAdjusting(product);
@@ -198,13 +211,27 @@ export function ProdutosScreen({ accessToken }: Props) {
         open={listOpen}
         onOpenChange={setListOpen}
       >
+        <label className="mb-4 block text-sm text-hetu-text/70">
+          Buscar
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.currentTarget.value)}
+            placeholder="Nome do produto ou insumo"
+            className="mt-1 min-h-10 w-full rounded-lg border border-hetu-green/20 px-3 text-sm outline-none focus:border-hetu-green sm:w-64"
+          />
+        </label>
         {loading ? (
           <p className="text-sm text-hetu-text/65">Carregando produtos...</p>
         ) : catalog.produtos.length === 0 ? (
           <p className="text-sm text-hetu-text/65">Nenhum produto cadastrado.</p>
+        ) : filteredProducts.length === 0 ? (
+          <p className="text-sm text-hetu-text/65">
+            Nenhum produto corresponde à busca.
+          </p>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
-            {catalog.produtos.map((product) => (
+            {filteredProducts.map((product) => (
               <article
                 key={product.id_ficha}
                 className="rounded-xl border border-hetu-green/10 p-4"

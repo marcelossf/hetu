@@ -2,7 +2,7 @@
 
 import { ArrowLeft, Plus, Save, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
   getProdutoCatalogo,
@@ -69,8 +69,11 @@ export function ProdutoFormScreen({
   const [draft, setDraft] = useState<ProductDraft>(emptyDraft);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<{ message: string } | null>(null);
   const [sourceUnavailable, setSourceUnavailable] = useState(false);
+  const errorRef = useRef<HTMLParagraphElement>(null);
+  const lastIngredientRef = useRef<HTMLSelectElement>(null);
+  const focusNewIngredient = useRef(false);
 
   useEffect(() => {
     let active = true;
@@ -86,7 +89,7 @@ export function ProdutoFormScreen({
           (candidate) => candidate.id_ficha === id,
         );
         if (!Number.isSafeInteger(id) || !product) {
-          setError("O produto solicitado não foi encontrado.");
+          setError({ message: "O produto solicitado não foi encontrado." });
           setSourceUnavailable(true);
           return;
         }
@@ -111,11 +114,12 @@ export function ProdutoFormScreen({
       .catch((loadError: unknown) => {
         if (active) {
           setSourceUnavailable(true);
-          setError(
-            loadError instanceof Error
-              ? loadError.message
-              : "Não foi possível carregar os dados do produto.",
-          );
+          setError({
+            message:
+              loadError instanceof Error
+                ? loadError.message
+                : "Não foi possível carregar os dados do produto.",
+          });
         }
       })
       .finally(() => {
@@ -125,6 +129,24 @@ export function ProdutoFormScreen({
       active = false;
     };
   }, [accessToken, productId, copyProductId]);
+
+  useEffect(() => {
+    if (!loading && error && errorRef.current) {
+      errorRef.current.focus({ preventScroll: true });
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [error, loading]);
+
+  useEffect(() => {
+    if (focusNewIngredient.current && lastIngredientRef.current) {
+      focusNewIngredient.current = false;
+      lastIngredientRef.current.focus({ preventScroll: true });
+      lastIngredientRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }
+  }, [draft.itens.length]);
 
   const estimatedUnitCost = useMemo(() => {
     const yieldValue = parseProdutoAmount(draft.rendimento, 2);
@@ -177,7 +199,7 @@ export function ProdutoFormScreen({
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSaving(true);
-    setError("");
+    setError(null);
 
     const rendimento = parseProdutoAmount(draft.rendimento);
     const custoEmbalagem = parseProdutoAmount(draft.custo_embalagem);
@@ -186,41 +208,57 @@ export function ProdutoFormScreen({
     const precoVenda = parseProdutoAmount(draft.preco_venda);
     const items: ProdutoInput["itens"] = [];
     const usedIngredients = new Set<number>();
-    let invalidItems = false;
+    function reject(message: string) {
+      setError({ message });
+      setSaving(false);
+    }
 
-    for (const item of draft.itens) {
-      if (!item.id && !item.quantidade) continue;
+    if (!draft.nome_receita.trim()) {
+      reject("Informe o nome do produto.");
+      return;
+    }
+    if (rendimento === null || rendimento <= 0) {
+      reject(
+        "Informe um rendimento maior que zero, com até duas casas decimais.",
+      );
+      return;
+    }
+    if (
+      custoEmbalagem === null ||
+      custoMaoObra === null ||
+      custoArmazenamento === null ||
+      precoVenda === null
+    ) {
+      reject(
+        "Confira os custos e o preço de venda: use valores com até duas casas decimais.",
+      );
+      return;
+    }
+
+    for (const [index, item] of draft.itens.entries()) {
+      if (!item.id && !item.quantidade.trim()) continue;
       const idInsumo = Number(item.id);
       const quantidade = parseProdutoAmount(item.quantidade, 4);
-      if (
-        !Number.isSafeInteger(idInsumo) ||
-        idInsumo < 1 ||
-        quantidade === null ||
-        quantidade <= 0 ||
-        usedIngredients.has(idInsumo)
-      ) {
-        invalidItems = true;
-        break;
+      if (!Number.isSafeInteger(idInsumo) || idInsumo < 1) {
+        reject(`Selecione o insumo da linha ${index + 1}.`);
+        return;
+      }
+      if (quantidade === null || quantidade <= 0) {
+        reject(
+          `Informe uma quantidade maior que zero, com até quatro casas decimais, na linha ${index + 1}.`,
+        );
+        return;
+      }
+      if (usedIngredients.has(idInsumo)) {
+        reject(`O insumo da linha ${index + 1} já foi adicionado à ficha.`);
+        return;
       }
       usedIngredients.add(idInsumo);
       items.push({ id_insumo: idInsumo, quantidade });
     }
 
-    if (
-      !draft.nome_receita.trim() ||
-      rendimento === null ||
-      rendimento <= 0 ||
-      custoEmbalagem === null ||
-      custoMaoObra === null ||
-      custoArmazenamento === null ||
-      precoVenda === null ||
-      invalidItems ||
-      items.length === 0
-    ) {
-      setError(
-        "Preencha os dados do produto, pelo menos um insumo e quantidades válidas sem repetições.",
-      );
-      setSaving(false);
+    if (items.length === 0) {
+      reject("Adicione pelo menos um insumo com quantidade.");
       return;
     }
 
@@ -239,11 +277,12 @@ export function ProdutoFormScreen({
       });
       router.replace("/cadastros/produtos");
     } catch (saveError: unknown) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Não foi possível salvar o produto.",
-      );
+      setError({
+        message:
+          saveError instanceof Error
+            ? saveError.message
+            : "Não foi possível salvar o produto.",
+      });
     } finally {
       setSaving(false);
     }
@@ -264,9 +303,14 @@ export function ProdutoFormScreen({
         Voltar para produtos
       </button>
 
-      {error && (
-        <p role="alert" className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800">
-          {error}
+      {error && sourceUnavailable && (
+        <p
+          ref={errorRef}
+          tabIndex={-1}
+          role="alert"
+          className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800"
+        >
+          {error.message}
         </p>
       )}
 
@@ -362,22 +406,8 @@ export function ProdutoFormScreen({
         </div>
 
         <section className="rounded-xl bg-hetu-cream p-4">
-          <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="mb-3">
             <h2 className="font-medium text-hetu-green">Insumos da ficha</h2>
-            <button
-              type="button"
-              onClick={() =>
-                setDraft((current) => ({
-                  ...current,
-                  itens: [...current.itens, { id: "", quantidade: "" }],
-                }))
-              }
-              disabled={draft.itens.length >= 100}
-              className="inline-flex min-h-9 items-center gap-2 rounded-lg px-3 text-sm font-medium text-hetu-green hover:bg-white disabled:opacity-50"
-            >
-              <Plus aria-hidden="true" className="h-4 w-4" />
-              Adicionar insumo
-            </button>
           </div>
           <div className="space-y-3">
             {draft.itens.map((item, index) => (
@@ -386,6 +416,11 @@ export function ProdutoFormScreen({
                 className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center"
               >
                 <select
+                  ref={
+                    index === draft.itens.length - 1
+                      ? lastIngredientRef
+                      : undefined
+                  }
                   value={item.id}
                   onChange={(event) =>
                     updateIngredient(index, "id", event.currentTarget.value)
@@ -400,12 +435,24 @@ export function ProdutoFormScreen({
                         supply.ativo === "Sim" ||
                         supply.id_insumo === Number(item.id),
                     )
-                    .map((supply) => (
-                      <option key={supply.id_insumo} value={supply.id_insumo}>
-                        {supply.nome} ({supply.unidade})
-                        {supply.ativo === "Não" ? " — inativo" : ""}
-                      </option>
-                    ))}
+                    .map((supply) => {
+                      const alreadyAdded = draft.itens.some(
+                        (other, otherIndex) =>
+                          otherIndex !== index &&
+                          other.id === supply.id_insumo.toString(),
+                      );
+                      return (
+                        <option
+                          key={supply.id_insumo}
+                          value={supply.id_insumo}
+                          disabled={alreadyAdded}
+                        >
+                          {supply.nome} ({supply.unidade})
+                          {supply.ativo === "Não" ? " — inativo" : ""}
+                          {alreadyAdded ? " — já adicionado" : ""}
+                        </option>
+                      );
+                    })}
                 </select>
                 <input
                   inputMode="decimal"
@@ -443,6 +490,21 @@ export function ProdutoFormScreen({
               </div>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={() => {
+              focusNewIngredient.current = true;
+              setDraft((current) => ({
+                ...current,
+                itens: [...current.itens, { id: "", quantidade: "" }],
+              }));
+            }}
+            disabled={draft.itens.length >= 100}
+            className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl border border-hetu-green bg-white px-4 text-sm font-medium text-hetu-green hover:bg-hetu-green hover:text-white disabled:opacity-50"
+          >
+            <Plus aria-hidden="true" className="h-4 w-4" />
+            Adicionar insumo
+          </button>
           <p className="mt-3 text-sm text-hetu-text/70">
             Custo estimado unitário:{" "}
             <strong className="text-hetu-green">
@@ -452,6 +514,17 @@ export function ProdutoFormScreen({
             </strong>
           </p>
         </section>
+
+        {error && (
+          <p
+            ref={errorRef}
+            tabIndex={-1}
+            role="alert"
+            className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-800"
+          >
+            {error.message}
+          </p>
+        )}
 
         <div className="flex flex-wrap gap-3">
           <button
