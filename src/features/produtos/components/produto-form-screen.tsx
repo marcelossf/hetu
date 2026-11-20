@@ -58,9 +58,11 @@ const inputClass =
 export function ProdutoFormScreen({
   accessToken,
   productId,
+  copyProductId,
 }: {
   accessToken: string;
   productId?: string;
+  copyProductId?: string;
 }) {
   const router = useRouter();
   const [catalog, setCatalog] = useState<ProdutoCatalogo>(emptyCatalog);
@@ -68,6 +70,7 @@ export function ProdutoFormScreen({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [sourceUnavailable, setSourceUnavailable] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -75,26 +78,30 @@ export function ProdutoFormScreen({
       .then((loadedCatalog) => {
         if (!active) return;
         setCatalog(loadedCatalog);
-        if (!productId) return;
+        const sourceId = copyProductId ?? productId;
+        if (!sourceId) return;
 
-        const id = Number(productId);
+        const id = Number(sourceId);
         const product = loadedCatalog.produtos.find(
           (candidate) => candidate.id_ficha === id,
         );
         if (!Number.isSafeInteger(id) || !product) {
           setError("O produto solicitado não foi encontrado.");
+          setSourceUnavailable(true);
           return;
         }
         setDraft({
-          id_ficha: product.id_ficha,
-          nome_receita: product.nome_receita,
+          ...(copyProductId ? {} : { id_ficha: product.id_ficha }),
+          nome_receita: copyProductId
+            ? `Cópia de ${product.nome_receita}`.slice(0, 120)
+            : product.nome_receita,
           rendimento: product.rendimento.toString(),
           id_categoria: product.id_categoria?.toString() ?? "",
           custo_embalagem: product.custo_embalagem.toFixed(2),
           custo_mao_obra: product.custo_mao_obra.toFixed(2),
           custo_armazenamento: product.custo_armazenamento.toFixed(2),
           preco_venda: product.preco_venda.toFixed(2),
-          ativo: product.ativo,
+          ativo: copyProductId ? "Sim" : product.ativo,
           itens: product.itens.map((item) => ({
             id: item.id_insumo.toString(),
             quantidade: item.qtd_insumo.toFixed(4),
@@ -103,6 +110,7 @@ export function ProdutoFormScreen({
       })
       .catch((loadError: unknown) => {
         if (active) {
+          setSourceUnavailable(true);
           setError(
             loadError instanceof Error
               ? loadError.message
@@ -116,7 +124,7 @@ export function ProdutoFormScreen({
     return () => {
       active = false;
     };
-  }, [accessToken, productId]);
+  }, [accessToken, productId, copyProductId]);
 
   const estimatedUnitCost = useMemo(() => {
     const yieldValue = parseProdutoAmount(draft.rendimento, 2);
@@ -262,7 +270,14 @@ export function ProdutoFormScreen({
         </p>
       )}
 
-      <form
+      {copyProductId && !sourceUnavailable && (
+        <p className="text-sm text-hetu-text/70">
+          A cópia será um novo produto, com estoque zerado e sem histórico.
+          Insumos inativos precisam ser substituídos antes de salvar.
+        </p>
+      )}
+
+      {!sourceUnavailable && <form
         onSubmit={submit}
         className="space-y-5 rounded-2xl border border-hetu-green/10 bg-white p-5 shadow-sm sm:p-7"
       >
@@ -380,10 +395,15 @@ export function ProdutoFormScreen({
                 >
                   <option value="">Selecione um insumo...</option>
                   {catalog.insumos
-                    .filter((supply) => supply.ativo === "Sim")
+                    .filter(
+                      (supply) =>
+                        supply.ativo === "Sim" ||
+                        supply.id_insumo === Number(item.id),
+                    )
                     .map((supply) => (
                       <option key={supply.id_insumo} value={supply.id_insumo}>
                         {supply.nome} ({supply.unidade})
+                        {supply.ativo === "Não" ? " — inativo" : ""}
                       </option>
                     ))}
                 </select>
@@ -451,7 +471,7 @@ export function ProdutoFormScreen({
             Cancelar
           </button>
         </div>
-      </form>
+      </form>}
     </div>
   );
 }

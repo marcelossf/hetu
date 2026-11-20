@@ -128,9 +128,11 @@ export type AppView =
 export function LoginScreen({
   initialView = "home",
   initialFichaId,
+  initialCopyFichaId,
 }: {
   initialView?: AppView;
   initialFichaId?: string;
+  initialCopyFichaId?: string;
 } = {}) {
   const [session, setSession] = useState<Session | null>(null);
   const sessionRef = useRef<Session | null>(null);
@@ -420,6 +422,7 @@ export function LoginScreen({
         isStandalone={isStandalone}
         initialView={initialView}
         initialFichaId={initialFichaId}
+        initialCopyFichaId={initialCopyFichaId}
         onBiometricPreferenceChange={handleBiometricPreferenceChange}
         onSignOut={() => handleSignOut()}
         onClearError={() => {
@@ -670,6 +673,7 @@ type AuthenticatedAppProps = {
   isStandalone: boolean | null;
   initialView: AppView;
   initialFichaId?: string;
+  initialCopyFichaId?: string;
   onBiometricPreferenceChange: (enabled: boolean) => void;
   onSignOut: () => void;
   onClearError: () => void;
@@ -686,6 +690,7 @@ function AuthenticatedApp({
   isStandalone,
   initialView,
   initialFichaId,
+  initialCopyFichaId,
   onBiometricPreferenceChange,
   onSignOut,
   onClearError,
@@ -960,9 +965,11 @@ function AuthenticatedApp({
                       : activeView === "categorias-produtos"
                         ? "Categorias de produtos"
                         : activeView === "produto-form"
-                          ? initialFichaId
-                            ? "Editar produto"
-                            : "Novo produto"
+                          ? initialCopyFichaId
+                            ? "Copiar produto"
+                            : initialFichaId
+                              ? "Editar produto"
+                              : "Novo produto"
                           : activeView === "fornecedores"
                             ? "Fornecedores"
                             : activeView === "compras"
@@ -1036,6 +1043,7 @@ function AuthenticatedApp({
           <ProdutoFormScreen
             accessToken={accessToken}
             productId={initialFichaId}
+            copyProductId={initialCopyFichaId}
           />
         ) : activeView === "compras" ? (
           <ComprasScreen accessToken={accessToken} />

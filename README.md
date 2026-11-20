@@ -61,6 +61,42 @@ cabeçalho `X-Hetu-Page-Nonce`; use `getUnlockedApiHeaders()` em
 `src/features/auth/services/auth-service.ts` para construí-los. Não remova essa
 verificação ao implementar os endpoints de negócio.
 
+## Cópia pontual de dados entre contas
+
+O script `supabase/copiar_dados_entre_usuarios.sql` é uma operação manual de
+administrador, não uma migração nem uma sincronização contínua. Antes de usá-lo,
+faça um backup recuperável do banco, pare alterações nas duas contas e aplique
+todas as migrações. Confira os UUIDs em **Supabase > Authentication > Users**:
+origem é a conta de onde vêm os dados; destino é a conta que os receberá.
+No SQL Editor do projeto correto, copie o script inteiro, preencha `v_origem`
+e `v_destino` no início com os UUIDs entre aspas simples e execute-o uma vez.
+Não compartilhe tokens ou chaves. O script valida as contas e executa
+atomicamente: qualquer erro desfaz as alterações. Examine o erro antes de
+tentar novamente.
+
+**Atenção:** o script substitui integralmente os históricos de compras, ajustes
+de estoque de produtos e custos de fichas da conta de destino pelos da origem.
+Não use se esses históricos precisarem ser preservados. Categorias, insumos,
+fornecedores e produtos com o mesmo nome (ignorando maiúsculas e espaços nas
+extremidades) são atualizados com os dados da origem; seus IDs no destino são
+mantidos. Os demais cadastros do destino não são removidos. Estoques e custos
+são copiados como saldos atuais, sem executar novamente as movimentações.
+Compras, cancelamentos e históricos de custo recebem os vínculos adequados ao
+destino; o autor original de um cancelamento permanece registrado.
+Fichas existentes somente no destino que usem insumos atualizados podem ficar
+com custos desatualizados e devem ser revisadas.
+
+Produções, vendas e seus históricos **não** são copiados nem removidos. Os
+saldos copiados podem refletir produções e vendas que não constarão no histórico
+da conta de destino. Autenticação, passkeys e preferências também não são
+copiadas. Após executar, confira os totais e vínculos no aplicativo. As contas
+continuam independentes; uma nova execução sobrescreverá novamente os dados e
+históricos indicados acima.
+
+Na lista de produtos, o botão **Copiar produto** abre uma nova ficha preenchida
+para revisão. Ela só é criada ao salvar, começa com estoque zero e não copia
+histórico. Insumos inativos precisam ser substituídos antes de salvar.
+
 ## Organização
 
 - `src/features/`: módulos de negócio e suas camadas `components`, `services`

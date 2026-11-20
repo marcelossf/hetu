@@ -1,6 +1,6 @@
 "use client";
 
-import { Pencil, Plus, Save, X } from "lucide-react";
+import { Copy, Pencil, Plus, Save, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
@@ -231,6 +231,14 @@ export function ProdutosScreen({ accessToken }: Props) {
                       className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-hetu-green hover:bg-hetu-cream"
                     >
                       <Pencil aria-hidden="true" className="h-4 w-4" />
+                    </Link>
+                    <Link
+                      href={`/cadastros/produtos/${product.id_ficha}/copiar`}
+                      aria-label={`Copiar ${product.nome_receita}`}
+                      title="Copiar produto"
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-hetu-green hover:bg-hetu-cream"
+                    >
+                      <Copy aria-hidden="true" className="h-4 w-4" />
                     </Link>
                     <button
                       type="button"
