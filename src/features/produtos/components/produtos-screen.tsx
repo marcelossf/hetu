@@ -34,6 +34,7 @@ export function ProdutosScreen({ accessToken }: Props) {
   const [stockTarget, setStockTarget] = useState("");
   const [stockReason, setStockReason] = useState("");
   const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("");
   const [listOpen, setListOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -71,15 +72,16 @@ export function ProdutosScreen({ accessToken }: Props) {
 
   const filteredProducts = useMemo(() => {
     const term = search.trim().toLocaleLowerCase("pt-BR");
-    if (!term) return catalog.produtos;
     return catalog.produtos.filter(
       (product) =>
-        product.nome_receita.toLocaleLowerCase("pt-BR").includes(term) ||
-        product.itens.some((item) =>
-          item.insumo?.nome.toLocaleLowerCase("pt-BR").includes(term),
-        ),
+        (!category || String(product.id_categoria) === category) &&
+        (!term ||
+          product.nome_receita.toLocaleLowerCase("pt-BR").includes(term) ||
+          product.itens.some((item) =>
+            item.insumo?.nome.toLocaleLowerCase("pt-BR").includes(term),
+          )),
     );
-  }, [catalog.produtos, search]);
+  }, [catalog.produtos, search, category]);
 
   function startAdjustment(product: Produto) {
     setAdjusting(product);
@@ -211,23 +213,40 @@ export function ProdutosScreen({ accessToken }: Props) {
         open={listOpen}
         onOpenChange={setListOpen}
       >
-        <label className="mb-4 block text-sm text-hetu-text/70">
-          Buscar
-          <input
-            type="search"
-            value={search}
-            onChange={(event) => setSearch(event.currentTarget.value)}
-            placeholder="Nome do produto ou insumo"
-            className="mt-1 min-h-10 w-full rounded-lg border border-hetu-green/20 px-3 text-sm outline-none focus:border-hetu-green sm:w-64"
-          />
-        </label>
+        <div className="mb-4 flex flex-wrap gap-4">
+          <label className="block w-full text-sm text-hetu-text/70 sm:w-64">
+            Buscar
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.currentTarget.value)}
+              placeholder="Nome do produto ou insumo"
+              className="mt-1 min-h-10 w-full rounded-lg border border-hetu-green/20 px-3 text-sm outline-none focus:border-hetu-green"
+            />
+          </label>
+          <label className="block w-full text-sm text-hetu-text/70 sm:w-64">
+            Categoria
+            <select
+              value={category}
+              onChange={(event) => setCategory(event.currentTarget.value)}
+              className="mt-1 min-h-10 w-full rounded-lg border border-hetu-green/20 bg-white px-3 text-sm outline-none focus:border-hetu-green"
+            >
+              <option value="">Todas</option>
+              {catalog.categorias.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.nome}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
         {loading ? (
           <p className="text-sm text-hetu-text/65">Carregando produtos...</p>
         ) : catalog.produtos.length === 0 ? (
           <p className="text-sm text-hetu-text/65">Nenhum produto cadastrado.</p>
         ) : filteredProducts.length === 0 ? (
           <p className="text-sm text-hetu-text/65">
-            Nenhum produto corresponde à busca.
+            Nenhum produto corresponde aos filtros.
           </p>
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
