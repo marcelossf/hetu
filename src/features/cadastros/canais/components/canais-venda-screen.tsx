@@ -100,12 +100,13 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
               required
               maxLength={100}
               value={form.nome}
-              onChange={(event) =>
+              onChange={(event) => {
+                const nome = event.currentTarget?.value;
                 setForm((current) => ({
                   ...current,
-                  nome: event.currentTarget.value,
-                }))
-              }
+                  nome,
+                }));
+              }}
               className={inputClass}
             />
           </label>
@@ -114,12 +115,13 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
             <input
               maxLength={300}
               value={form.endereco}
-              onChange={(event) =>
+              onChange={(event) => {
+                const endereco = event.currentTarget?.value;
                 setForm((current) => ({
                   ...current,
-                  endereco: event.currentTarget.value,
-                }))
-              }
+                  endereco,
+                }));
+              }}
               className={inputClass}
             />
           </label>
@@ -128,13 +130,13 @@ export function CanaisVendaScreen({ accessToken }: { accessToken: string }) {
               Status
               <select
                 value={form.ativo}
-                onChange={(event) =>
+                onChange={(event) => {
+                  const ativo = event.currentTarget?.value === "Não" ? "Não" : "Sim";
                   setForm((current) => ({
                     ...current,
-                    ativo:
-                      event.currentTarget.value === "Não" ? "Não" : "Sim",
-                  }))
-                }
+                    ativo,
+                  }));
+                }}
                 className={inputClass}
               >
                 <option value="Sim">Ativo</option>

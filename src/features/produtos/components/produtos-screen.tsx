@@ -298,7 +298,7 @@ export function ProdutosScreen({ accessToken }: Props) {
                 <ul className="mt-3 flex flex-wrap gap-2">
                   {product.itens.map((item) => (
                     <li
-                      key={item.id_insumo}
+                      key={item.id_item}
                       className="rounded-full bg-hetu-cream px-3 py-1 text-xs text-hetu-text/70"
                     >
                       {item.insumo?.nome ?? "Insumo"}:{" "}

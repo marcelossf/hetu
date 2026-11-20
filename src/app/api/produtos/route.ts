@@ -139,7 +139,7 @@ export const GET = createProtectedSupabaseHandler(
         .order("nome"),
       supabase
         .from("db_fichas_itens")
-        .select("id_ficha, id_insumo, qtd_insumo"),
+        .select("id_item, id_ficha, id_insumo, qtd_insumo"),
       supabase
         .from("db_ajustes_estoque_produto")
         .select("id_ajuste, id_ficha, tipo, quantidade_delta, motivo, criado_em")

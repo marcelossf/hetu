@@ -15,6 +15,7 @@ export type ProdutoInsumo = {
 };
 
 export type ProdutoItem = {
+  id_item: number;
   id_insumo: number;
   qtd_insumo: number;
   insumo: ProdutoInsumo | null;
@@ -136,6 +137,7 @@ function parseProduct(value: unknown): Produto {
       throw new Error("O servidor retornou um item de ficha inválido.");
     }
     return {
+      id_item: parseId(item.id_item),
       id_insumo: parseId(item.id_insumo),
       qtd_insumo: parseNumber(item.qtd_insumo),
       insumo: item.insumo === null ? null : parseSupply(item.insumo),
