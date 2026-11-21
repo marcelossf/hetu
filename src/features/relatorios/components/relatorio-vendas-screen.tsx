@@ -160,7 +160,7 @@ export function RelatorioVendasScreen({
 
   return (
     <div className="space-y-6">
-      <CollapsibleBlock title="Filtros do relatório">
+      <CollapsibleBlock title="Filtros do relatório" defaultOpen>
         <form onSubmit={submit} className="grid gap-4 lg:grid-cols-5 lg:items-end">
           <Field label="Data inicial">
             <input
@@ -259,7 +259,7 @@ export function RelatorioVendasScreen({
         ]}
       />
 
-      <CollapsibleBlock title="Evolução das vendas">
+      <CollapsibleBlock title="Evolução das vendas" defaultOpen>
         <ReportLineChart
           points={dailyRevenue}
           formatValue={currency}
@@ -267,7 +267,7 @@ export function RelatorioVendasScreen({
         />
       </CollapsibleBlock>
 
-      <CollapsibleBlock title="Ranking de produtos">
+      <CollapsibleBlock title="Ranking de produtos" defaultOpen>
         <ReportBarChart
           points={ranking.slice(0, 10).map((item) => ({
             label: `${item.name} (${quantity(item.quantity)} un.)`,
@@ -278,7 +278,7 @@ export function RelatorioVendasScreen({
         />
       </CollapsibleBlock>
 
-      <CollapsibleBlock title="Vendas do período">
+      <CollapsibleBlock title="Vendas do período" defaultOpen>
         {report.vendas.length === 0 ? (
           <p className="text-sm text-hetu-text/65">
             Nenhuma venda encontrada com os filtros informados.
