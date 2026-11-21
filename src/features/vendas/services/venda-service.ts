@@ -167,6 +167,7 @@ export async function registerVenda(
   accessToken: string,
   input: {
     id_canal: number;
+    data_venda: string;
     subtotal: number;
     desconto: number;
     observacoes: string;
@@ -177,6 +178,16 @@ export async function registerVenda(
   await requestProtectedJson("/api/vendas", accessToken, {
     method: "POST",
     body: input,
+  });
+}
+
+export async function updateVenda(
+  accessToken: string,
+  input: { id_venda: number; data_venda: string | null; observacoes: string },
+): Promise<void> {
+  await requestProtectedJson("/api/vendas", accessToken, {
+    method: "PATCH",
+    body: { acao: "editar", ...input },
   });
 }
 

@@ -235,6 +235,14 @@ O percentual de desconto não é persistido: a interface calcula o valor em
 moeda e apenas esse valor é armazenado. Uma venda pode ter vários pagamentos,
 mas precisa estar quitada no registro. O cancelamento preserva o histórico de
 pagamentos e repõe o estoque; eventuais reembolsos são tratados fora do Hetu.
+O cadastro permite escolher a data da venda, e data e observações podem ser
+editadas mesmo após o cancelamento, sem alterar itens, pagamentos ou estoque.
+A data escolhida é armazenada às 12h no fuso UTC-3, compatível com os filtros
+de relatórios. Ao editar somente a observação, o horário existente é preservado.
+Vendas antigas sem data permanecem assim até serem corrigidas manualmente;
+editar a observação não exige inventar uma data. A migração
+`supabase/migrations/20261121190000_add_sale_dates_and_editing.sql` configura o
+padrão da coluna e cria funções protegidas para essas operações.
 Para vendas legadas, a migração
 `supabase/migrations/20261118135000_reconcile_legacy_sales_schema.sql`
 completa os campos ausentes, deriva o subtotal dos itens (ou do total mais o

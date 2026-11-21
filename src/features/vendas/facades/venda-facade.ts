@@ -32,3 +32,13 @@ export function formatVendaQuantity(value: number): string {
     maximumFractionDigits: 2,
   }).format(value);
 }
+
+export function vendaDateFromTimestamp(value: string): string {
+  return new Date(new Date(value).getTime() - 3 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+export function formatVendaDate(value: string): string {
+  return vendaDateFromTimestamp(value).split("-").reverse().join("/");
+}

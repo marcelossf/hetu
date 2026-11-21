@@ -5,6 +5,7 @@ import {
   readJsonRecord,
 } from "@/lib/api/protected-supabase";
 import { rpcErrorResponse } from "@/lib/api/rpc-error-response";
+import { isDateOnly } from "@/lib/date-only";
 
 export const GET = createProtectedSupabaseHandler(
   "vendas-listagem",
@@ -84,6 +85,7 @@ export const POST = createProtectedSupabaseHandler(
       typeof body.id_canal !== "number" ||
       !Number.isSafeInteger(body.id_canal) ||
       body.id_canal < 1 ||
+      !isDateOnly(body.data_venda) ||
       typeof body.subtotal !== "number" ||
       !Number.isFinite(body.subtotal) ||
       body.subtotal < 0 ||
@@ -105,13 +107,14 @@ export const POST = createProtectedSupabaseHandler(
       );
     }
 
-    const { data, error } = await supabase.rpc("register_sale", {
+    const { data, error } = await supabase.rpc("register_sale_with_date", {
       p_id_canal: body.id_canal,
       p_subtotal: body.subtotal,
       p_desconto: body.desconto,
       p_observacoes: body.observacoes.trim() || null,
       p_itens: body.itens,
       p_pagamentos: body.pagamentos,
+      p_data_venda: body.data_venda,
     });
     if (error) {
       const response = rpcErrorResponse(error);
@@ -136,6 +139,38 @@ export const PATCH = createProtectedSupabaseHandler(
         { error: "Informe o identificador da venda." },
         { status: 400 },
       );
+    }
+
+    if (body.acao === "editar") {
+      if (
+        Object.keys(body).some(
+          (field) => !["acao", "id_venda", "data_venda", "observacoes"].includes(field),
+        ) ||
+        (body.data_venda !== null && !isDateOnly(body.data_venda)) ||
+        typeof body.observacoes !== "string" ||
+        body.observacoes.length > 1000
+      ) {
+        return Response.json(
+          { error: "Confira a data e a observação da venda." },
+          { status: 400 },
+        );
+      }
+
+      const { error } = await supabase.rpc("update_sale_details", {
+        p_id_venda: body.id_venda,
+        p_data_venda: body.data_venda,
+        p_observacoes: body.observacoes.trim() || null,
+      });
+      if (error) {
+        const response = rpcErrorResponse(error);
+        if (response) return response;
+        throw error;
+      }
+      return Response.json({ sucesso: true });
+    }
+
+    if (Object.keys(body).some((field) => field !== "id_venda")) {
+      return Response.json({ error: "Informe uma operação válida." }, { status: 400 });
     }
 
     const { error } = await supabase.rpc("cancel_sale", {

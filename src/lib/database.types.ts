@@ -666,6 +666,26 @@ export type Database = {
         };
         Returns: number;
       };
+      register_sale_with_date: {
+        Args: {
+          p_id_canal: number;
+          p_subtotal: number;
+          p_desconto: number;
+          p_observacoes: string | null;
+          p_itens: Json;
+          p_pagamentos: Json;
+          p_data_venda: string;
+        };
+        Returns: number;
+      };
+      update_sale_details: {
+        Args: {
+          p_id_venda: number;
+          p_data_venda: string | null;
+          p_observacoes: string | null;
+        };
+        Returns: boolean;
+      };
       cancel_sale: {
         Args: {
           p_id_venda: number;

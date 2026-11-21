@@ -7,6 +7,7 @@ import {
   cancelVenda,
   getVendaCatalogo,
   registerVenda,
+  updateVenda,
 } from "@/features/vendas/services/venda-service";
 import type {
   FormaPagamento,
@@ -16,9 +17,11 @@ import type {
 import {
   calculateDiscountAmount,
   formatVendaCurrency,
+  formatVendaDate,
   formatVendaQuantity,
   parseVendaAmount,
   roundVendaMoney,
+  vendaDateFromTimestamp,
 } from "@/features/vendas/facades/venda-facade";
 
 type ItemDraft = { id: string; quantidade: string };
@@ -40,6 +43,10 @@ const paymentOptions: Array<{ value: FormaPagamento; label: string }> = [
 const inputClass =
   "mt-1 min-h-11 w-full rounded-lg border border-hetu-green/20 bg-white px-3 text-sm outline-none focus:border-hetu-green focus:ring-2 focus:ring-hetu-green/15";
 
+function today(): string {
+  return new Date().toLocaleDateString("en-CA");
+}
+
 function productForRow(
   products: ProdutoVenda[],
   row: ItemDraft,
@@ -50,6 +57,7 @@ function productForRow(
 export function VendasScreen({ accessToken }: { accessToken: string }) {
   const [catalog, setCatalog] = useState<VendaCatalogo>(emptyCatalog);
   const [channelId, setChannelId] = useState("");
+  const [saleDate, setSaleDate] = useState(today);
   const [items, setItems] = useState<ItemDraft[]>([
     { id: "", quantidade: "1" },
   ]);
@@ -59,6 +67,9 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
   ]);
   const [automaticPayment, setAutomaticPayment] = useState(true);
   const [observations, setObservations] = useState("");
+  const [editingSaleId, setEditingSaleId] = useState<number | null>(null);
+  const [editDate, setEditDate] = useState("");
+  const [editObservations, setEditObservations] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -232,6 +243,7 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
     try {
       await registerVenda(accessToken, {
         id_canal: Number(channelId),
+        data_venda: saleDate,
         subtotal,
         desconto: discount,
         observacoes: observations,
@@ -249,12 +261,38 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
       setPayments([{ forma_pagamento: "pix", valor: "0,00" }]);
       setAutomaticPayment(true);
       setObservations("");
+      setSaleDate(today());
       setNotice("Venda registrada e estoque dos produtos atualizado.");
     } catch (saveError: unknown) {
       setError(
         saveError instanceof Error
           ? saveError.message
           : "Não foi possível registrar a venda.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleEditSale(event: FormEvent<HTMLFormElement>, id: number) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setNotice("");
+    try {
+      await updateVenda(accessToken, {
+        id_venda: id,
+        data_venda: editDate || null,
+        observacoes: editObservations,
+      });
+      await refresh();
+      setEditingSaleId(null);
+      setNotice("Data e observação da venda atualizadas.");
+    } catch (saveError: unknown) {
+      setError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Não foi possível atualizar a venda.",
       );
     } finally {
       setSaving(false);
@@ -312,6 +350,16 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
           </p>
         ) : (
           <form onSubmit={submit} className="mt-5 space-y-5">
+            <label className="block max-w-xl text-sm font-medium text-hetu-text">
+              Data da venda
+              <input
+                type="date"
+                required
+                value={saleDate}
+                onChange={(event) => setSaleDate(event.currentTarget.value)}
+                className={inputClass}
+              />
+            </label>
             <label className="block max-w-xl text-sm font-medium text-hetu-text">
               Canal de venda
               <select
@@ -591,7 +639,7 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
                     </h3>
                     <p className="mt-1 text-xs text-hetu-text/60">
                       {sale.data_venda
-                        ? new Date(sale.data_venda).toLocaleString("pt-BR")
+                        ? formatVendaDate(sale.data_venda)
                         : "Data não informada"}{" "}
                       ·{" "}
                       {sale.status === "concluida" ? "Concluída" : "Cancelada"}
@@ -601,12 +649,26 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
                     <p className="font-medium text-hetu-green">
                       {formatVendaCurrency(sale.valor_total_pedido)}
                     </p>
+                    <button
+                      type="button"
+                      disabled={saving}
+                      onClick={() => {
+                        setEditingSaleId(sale.id);
+                        setEditDate(
+                          sale.data_venda ? vendaDateFromTimestamp(sale.data_venda) : "",
+                        );
+                        setEditObservations(sale.observacoes ?? "");
+                      }}
+                      className="mt-2 text-xs font-medium text-hetu-green underline underline-offset-2 disabled:opacity-50"
+                    >
+                      Editar data e observação
+                    </button>
                     {sale.status === "concluida" && (
                       <button
                         type="button"
                         disabled={saving}
                         onClick={() => void handleCancelSale(sale.id)}
-                        className="mt-2 text-xs font-medium text-red-700 underline underline-offset-2 disabled:opacity-50"
+                        className="ml-3 mt-2 text-xs font-medium text-red-700 underline underline-offset-2 disabled:opacity-50"
                       >
                         Cancelar venda
                       </button>
@@ -635,6 +697,50 @@ export function VendasScreen({ accessToken }: { accessToken: string }) {
                   <p className="mt-2 text-sm text-hetu-text/65">
                     {sale.observacoes}
                   </p>
+                )}
+                {editingSaleId === sale.id && (
+                  <form
+                    onSubmit={(event) => void handleEditSale(event, sale.id)}
+                    className="mt-4 space-y-3 rounded-xl bg-hetu-cream p-4"
+                  >
+                    <label className="block text-sm font-medium text-hetu-text">
+                      Data da venda
+                      <input
+                        type="date"
+                        required={sale.data_venda !== null}
+                        value={editDate}
+                        onChange={(event) => setEditDate(event.currentTarget.value)}
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className="block text-sm font-medium text-hetu-text">
+                      Observação
+                      <textarea
+                        maxLength={1000}
+                        rows={3}
+                        value={editObservations}
+                        onChange={(event) => setEditObservations(event.currentTarget.value)}
+                        className={`${inputClass} py-3`}
+                      />
+                    </label>
+                    <div className="flex flex-wrap gap-3">
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="min-h-11 rounded-xl bg-hetu-green px-4 text-sm font-medium text-white disabled:opacity-50"
+                      >
+                        {saving ? "Salvando..." : "Salvar alterações"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={saving}
+                        onClick={() => setEditingSaleId(null)}
+                        className="min-h-11 rounded-xl px-4 text-sm font-medium text-hetu-green disabled:opacity-50"
+                      >
+                        Descartar
+                      </button>
+                    </div>
+                  </form>
                 )}
               </article>
             ))}

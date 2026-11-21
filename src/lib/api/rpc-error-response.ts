@@ -21,6 +21,7 @@ const invalidInputMessages: Record<string, string> = {
   INVALID_SALE_ITEM: "Confira os produtos e quantidades da venda.",
   DUPLICATE_SALE_PRODUCT: "Remova produtos repetidos da venda.",
   INVALID_SALE_NOTES: "A observação da venda excede o limite permitido.",
+  INVALID_SALE_DATE: "Informe uma data válida para a venda.",
   SALES_CHANNEL_NOT_FOUND_OR_INACTIVE: "O canal não existe ou está inativo.",
   SALE_TOTAL_CHANGED_OR_INVALID_DISCOUNT:
     "O desconto ou os valores dos produtos estão desatualizados.",

@@ -13,6 +13,10 @@ import {
 } from "@/features/relatorios/components/report-chart";
 import { ReportSummary } from "@/features/relatorios/components/report-summary";
 import { CollapsibleBlock } from "@/lib/components/collapsible-block";
+import {
+  formatVendaDate,
+  vendaDateFromTimestamp,
+} from "@/features/vendas/facades/venda-facade";
 
 function dateInput(offsetDays = 0): string {
   const date = new Date();
@@ -122,7 +126,7 @@ export function RelatorioVendasScreen({
 
   const dailyTotals = new Map<string, number>();
   for (const sale of completedSales) {
-    const day = sale.data_venda.slice(0, 10);
+    const day = vendaDateFromTimestamp(sale.data_venda);
     dailyTotals.set(day, (dailyTotals.get(day) ?? 0) + sale.valor_total_pedido);
   }
   const dailyRevenue = [...dailyTotals.entries()].map(([label, value]) => ({
@@ -300,7 +304,7 @@ export function RelatorioVendasScreen({
                 {report.vendas.map((sale) => (
                   <tr key={sale.id}>
                     <td className="px-3 py-3">
-                      {new Date(sale.data_venda).toLocaleDateString("pt-BR")}
+                      {formatVendaDate(sale.data_venda)}
                     </td>
                     <td className="px-3 py-3 font-medium">#{sale.id}</td>
                     <td className="px-3 py-3">{sale.nome_canal}</td>
