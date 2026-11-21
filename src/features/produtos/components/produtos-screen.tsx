@@ -35,6 +35,9 @@ export function ProdutosScreen({ accessToken }: Props) {
   const [stockReason, setStockReason] = useState("");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
+  const [expandedProducts, setExpandedProducts] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [listOpen, setListOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [adjustOpen, setAdjustOpen] = useState(false);
@@ -295,8 +298,14 @@ export function ProdutosScreen({ accessToken }: Props) {
                     </button>
                   </div>
                 </div>
-                <ul className="mt-3 flex flex-wrap gap-2">
-                  {product.itens.map((item) => (
+                <ul
+                  id={`product-ingredients-${product.id_ficha}`}
+                  className="mt-3 flex flex-wrap gap-2"
+                >
+                  {product.itens.slice(
+                    0,
+                    expandedProducts.has(product.id_ficha) ? undefined : 4,
+                  ).map((item) => (
                     <li
                       key={item.id_item}
                       className="rounded-full bg-hetu-cream px-3 py-1 text-xs text-hetu-text/70"
@@ -307,6 +316,28 @@ export function ProdutosScreen({ accessToken }: Props) {
                     </li>
                   ))}
                 </ul>
+                {product.itens.length > 4 && (
+                  <button
+                    type="button"
+                    aria-expanded={expandedProducts.has(product.id_ficha)}
+                    aria-controls={`product-ingredients-${product.id_ficha}`}
+                    aria-label={`${expandedProducts.has(product.id_ficha) ? "Ver menos" : "Ver mais"} insumos de ${product.nome_receita}`}
+                    onClick={() =>
+                      setExpandedProducts((current) => {
+                        const next = new Set(current);
+                        if (next.has(product.id_ficha)) {
+                          next.delete(product.id_ficha);
+                        } else {
+                          next.add(product.id_ficha);
+                        }
+                        return next;
+                      })
+                    }
+                    className="mt-2 min-h-10 text-sm font-medium text-hetu-green hover:underline"
+                  >
+                    {expandedProducts.has(product.id_ficha) ? "Ver menos" : "Ver mais"}
+                  </button>
+                )}
               </article>
             ))}
           </div>

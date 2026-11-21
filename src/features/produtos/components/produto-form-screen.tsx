@@ -13,11 +13,16 @@ import type {
   ProdutoInput,
 } from "@/features/produtos/services/produto-service";
 import {
+  convertProdutoQuantity,
   formatProdutoCurrency,
   parseProdutoAmount,
 } from "@/features/produtos/facades/produto-facade";
 
-type IngredientDraft = { id: string; quantidade: string };
+type IngredientDraft = {
+  id: string;
+  quantidade: string;
+  quantidadeConvertida: string;
+};
 type ProductDraft = {
   id_ficha?: number;
   nome_receita: string;
@@ -48,7 +53,7 @@ function emptyDraft(): ProductDraft {
     custo_armazenamento: "0",
     preco_venda: "0",
     ativo: "Sim",
-    itens: [{ id: "", quantidade: "" }],
+    itens: [{ id: "", quantidade: "", quantidadeConvertida: "" }],
   };
 }
 
@@ -108,6 +113,10 @@ export function ProdutoFormScreen({
           itens: product.itens.map((item) => ({
             id: item.id_insumo.toString(),
             quantidade: item.qtd_insumo.toFixed(4),
+            quantidadeConvertida: convertProdutoQuantity(
+              item.qtd_insumo.toFixed(4),
+              true,
+            ),
           })),
         });
       })
@@ -190,9 +199,24 @@ export function ProdutoFormScreen({
   ) {
     setDraft((current) => ({
       ...current,
-      itens: current.itens.map((item, itemIndex) =>
-        itemIndex === index ? { ...item, [field]: value } : item,
-      ),
+      itens: current.itens.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+        if (field === "quantidade") {
+          return {
+            ...item,
+            quantidade: value,
+            quantidadeConvertida: convertProdutoQuantity(value, true),
+          };
+        }
+        if (field === "quantidadeConvertida") {
+          return {
+            ...item,
+            quantidade: convertProdutoQuantity(value, false),
+            quantidadeConvertida: value,
+          };
+        }
+        return { ...item, id: value };
+      }),
     }));
   }
 
@@ -245,7 +269,7 @@ export function ProdutoFormScreen({
       }
       if (quantidade === null || quantidade <= 0) {
         reject(
-          `Informe uma quantidade maior que zero, com até quatro casas decimais, na linha ${index + 1}.`,
+          `Informe uma quantidade maior que zero, com até quatro casas decimais na unidade do insumo, na linha ${index + 1}.`,
         );
         return;
       }
@@ -410,85 +434,120 @@ export function ProdutoFormScreen({
             <h2 className="font-medium text-hetu-green">Insumos da ficha</h2>
           </div>
           <div className="space-y-3">
-            {draft.itens.map((item, index) => (
-              <div
-                key={index}
-                className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_auto] sm:items-center"
-              >
-                <select
-                  ref={
-                    index === draft.itens.length - 1
-                      ? lastIngredientRef
-                      : undefined
-                  }
-                  value={item.id}
-                  onChange={(event) =>
-                    updateIngredient(index, "id", event.currentTarget.value)
-                  }
-                  className={inputClass}
-                  aria-label={`Insumo ${index + 1}`}
+            {draft.itens.map((item, index) => {
+              const unit = catalog.insumos.find(
+                (supply) => supply.id_insumo === Number(item.id),
+              )?.unidade;
+              const normalizedUnit = unit?.trim().toLocaleLowerCase("pt-BR");
+              const smallerUnit =
+                normalizedUnit === "kg" ? "g" : normalizedUnit === "l" ? "mL" : null;
+              return (
+                <div
+                  key={index}
+                  className={`grid gap-2 sm:items-end ${
+                    smallerUnit
+                      ? "sm:grid-cols-[minmax(0,1fr)_10rem_10rem_auto]"
+                      : "sm:grid-cols-[minmax(0,1fr)_10rem_auto]"
+                  }`}
                 >
-                  <option value="">Selecione um insumo...</option>
-                  {catalog.insumos
-                    .filter(
-                      (supply) =>
-                        supply.ativo === "Sim" ||
-                        supply.id_insumo === Number(item.id),
-                    )
-                    .map((supply) => {
-                      const alreadyAdded = draft.itens.some(
-                        (other, otherIndex) =>
-                          otherIndex !== index &&
-                          other.id === supply.id_insumo.toString(),
-                      );
-                      return (
-                        <option
-                          key={supply.id_insumo}
-                          value={supply.id_insumo}
-                          disabled={alreadyAdded}
-                        >
-                          {supply.nome} ({supply.unidade})
-                          {supply.ativo === "Não" ? " — inativo" : ""}
-                          {alreadyAdded ? " — já adicionado" : ""}
-                        </option>
-                      );
-                    })}
-                </select>
-                <input
-                  inputMode="decimal"
-                  value={item.quantidade}
-                  onFocus={(event) => event.currentTarget.select()}
-                  onChange={(event) =>
-                    updateIngredient(
-                      index,
-                      "quantidade",
-                      event.currentTarget.value.replace(",", "."),
-                    )
-                  }
-                  placeholder="Quantidade"
-                  aria-label={`Quantidade do insumo ${index + 1}`}
-                  className={inputClass}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setDraft((current) => ({
-                      ...current,
-                      itens:
-                        current.itens.length === 1
-                          ? [{ id: "", quantidade: "" }]
-                          : current.itens.filter(
-                              (_, itemIndex) => itemIndex !== index,
-                            ),
-                    }))
-                  }
-                  aria-label={`Remover insumo ${index + 1}`}
-                  className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-red-200 text-red-700 hover:bg-red-50 sm:w-11"
-                >
-                  <X aria-hidden="true" className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+                  <select
+                    ref={
+                      index === draft.itens.length - 1
+                        ? lastIngredientRef
+                        : undefined
+                    }
+                    value={item.id}
+                    onChange={(event) =>
+                      updateIngredient(index, "id", event.currentTarget.value)
+                    }
+                    className={inputClass}
+                    aria-label={`Insumo ${index + 1}`}
+                  >
+                    <option value="">Selecione um insumo...</option>
+                    {catalog.insumos
+                      .filter(
+                        (supply) =>
+                          supply.ativo === "Sim" ||
+                          supply.id_insumo === Number(item.id),
+                      )
+                      .map((supply) => {
+                        const alreadyAdded = draft.itens.some(
+                          (other, otherIndex) =>
+                            otherIndex !== index &&
+                            other.id === supply.id_insumo.toString(),
+                        );
+                        return (
+                          <option
+                            key={supply.id_insumo}
+                            value={supply.id_insumo}
+                            disabled={alreadyAdded}
+                          >
+                            {supply.nome} ({supply.unidade})
+                            {supply.ativo === "Não" ? " — inativo" : ""}
+                            {alreadyAdded ? " — já adicionado" : ""}
+                          </option>
+                        );
+                      })}
+                  </select>
+                  <label className="text-sm font-medium text-hetu-text">
+                    Quantidade{unit ? ` (${unit})` : ""}
+                    <input
+                      inputMode="decimal"
+                      value={item.quantidade}
+                      onFocus={(event) => event.currentTarget.select()}
+                      onChange={(event) =>
+                        updateIngredient(
+                          index,
+                          "quantidade",
+                          event.currentTarget.value.replace(",", "."),
+                        )
+                      }
+                      placeholder="Quantidade"
+                      aria-label={`Quantidade do insumo ${index + 1}${unit ? ` em ${unit}` : ""}`}
+                      className={inputClass}
+                    />
+                  </label>
+                  {smallerUnit && (
+                    <label className="text-sm font-medium text-hetu-text">
+                      Quantidade ({smallerUnit})
+                      <input
+                        inputMode="decimal"
+                        value={item.quantidadeConvertida}
+                        onFocus={(event) => event.currentTarget.select()}
+                        onChange={(event) =>
+                          updateIngredient(
+                            index,
+                            "quantidadeConvertida",
+                            event.currentTarget.value.replace(",", "."),
+                          )
+                        }
+                        placeholder="Quantidade"
+                        aria-label={`Quantidade do insumo ${index + 1} em ${smallerUnit}`}
+                        className={inputClass}
+                      />
+                    </label>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDraft((current) => ({
+                        ...current,
+                        itens:
+                          current.itens.length === 1
+                            ? [{ id: "", quantidade: "", quantidadeConvertida: "" }]
+                            : current.itens.filter(
+                                (_, itemIndex) => itemIndex !== index,
+                              ),
+                      }))
+                    }
+                    aria-label={`Remover insumo ${index + 1}`}
+                    className="inline-flex min-h-11 w-full items-center justify-center rounded-lg border border-red-200 text-red-700 hover:bg-red-50 sm:w-11"
+                  >
+                    <X aria-hidden="true" className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
           <button
             type="button"
@@ -496,7 +555,10 @@ export function ProdutoFormScreen({
               focusNewIngredient.current = true;
               setDraft((current) => ({
                 ...current,
-                itens: [...current.itens, { id: "", quantidade: "" }],
+                itens: [
+                  ...current.itens,
+                  { id: "", quantidade: "", quantidadeConvertida: "" },
+                ],
               }));
             }}
             disabled={draft.itens.length >= 100}
@@ -505,6 +567,9 @@ export function ProdutoFormScreen({
             <Plus aria-hidden="true" className="h-4 w-4" />
             Adicionar insumo
           </button>
+          <p className="mt-3 text-sm text-hetu-text/70">
+            Para insumos em kg ou L, a menor quantidade é 0,1 g ou 0,1 mL.
+          </p>
           <p className="mt-3 text-sm text-hetu-text/70">
             Custo estimado unitário:{" "}
             <strong className="text-hetu-green">
